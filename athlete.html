@@ -13,11 +13,29 @@
       min-height: 100vh;
     }
     
+    .nav-bar {
+      background: #1a1a2e;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+    .nav-bar a {
+      color: #888;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .nav-bar a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .nav-bar .brand { color: #e94560; font-weight: 700; font-size: 16px; }
+    
     .header {
       background: #1a1a2e;
       padding: 20px;
       text-align: center;
-      border-bottom: 1px solid #333;
     }
     .header h1 { font-size: 24px; margin-bottom: 5px; }
     .header p { color: #888; font-size: 14px; }
@@ -115,6 +133,12 @@
   </style>
 </head>
 <body>
+  <nav class="nav-bar">
+    <a href="index.html">← Home</a>
+    <span class="brand">ARK Games</span>
+    <a href="leaderboard.html">🏆 Classifica</a>
+  </nav>
+  
   <div class="header">
     <h1>🏃 Vista Atleta</h1>
     <p>Controlla i tuoi score</p>
