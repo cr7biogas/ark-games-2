@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🏆 Gestione Season - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    
+    .header {
+      padding: 20px;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .header a { color: #888; text-decoration: none; font-size: 1.5rem; }
+    .header h1 { font-size: 1.3rem; flex: 1; }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+    }
+    .tab {
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 10px;
+      color: #888;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active { background: #e94560; color: white; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h3 { margin-bottom: 15px; color: #f39c12; }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 2px solid #333;
+      background: rgba(0,0,0,0.3);
+      color: white;
+      font-size: 1rem;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #e94560; color: white; }
+    .btn-primary:hover { background: #d63850; }
+    .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
+    .btn-success { background: #27ae60; color: white; }
+    
+    .wod-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .wod-item {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .wod-item .week {
+      background: #e94560;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .wod-item .info { flex: 1; }
+    .wod-item .info h4 { margin-bottom: 4px; }
+    .wod-item .info p { color: #888; font-size: 0.85rem; }
+    .wod-item .actions { display: flex; gap: 8px; }
+    .wod-item .actions button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      cursor: pointer;
+    }
+    
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .team-card {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+    }
+    .team-card .emoji { font-size: 2rem; margin-bottom: 8px; }
+    .team-card h4 { margin-bottom: 4px; }
+    .team-card .category { color: #f39c12; font-size: 0.85rem; margin-bottom: 8px; }
+    .team-card .stats { color: #888; font-size: 0.8rem; }
+    
+    .schedule-week {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .schedule-week .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 0;
+      background: none;
+    }
+    .schedule-week .date { color: #f39c12; font-weight: 600; }
+    .schedule-week .wod { color: #888; }
+    .schedule-week .slots {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .schedule-week .slot {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .schedule-week .slot h5 { color: #e94560; margin-bottom: 8px; font-size: 0.85rem; }
+    .schedule-week .slot .teams { font-size: 0.8rem; color: #aaa; }
+    
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .leaderboard-table th { color: #888; font-weight: 500; }
+    .leaderboard-table tr:hover { background: rgba(255,255,255,0.05); }
+    .leaderboard-table .pos { font-weight: 700; color: #f39c12; }
+    
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-draft { background: #555; color: #aaa; }
+    .status-registration { background: #f39c12; color: #000; }
+    .status-active { background: #27ae60; color: white; }
+    .status-completed { background: #3498db; color: white; }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 15px; }
+    
+    .cta-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 15px 20px;
+      background: rgba(26, 26, 46, 0.95);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .cta-bar button { flex: 1; max-width: 200px; }
+    
+    /* Add bottom padding for CTA bar */
+    .container { padding-bottom: 100px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="./">←</a>
+    <h1 id="pageTitle">🏆 Nuova Season</h1>
+    <span class="status-badge status-draft" id="statusBadge">Bozza</span>
+  </div>
+  
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="info">📋 Info</button>
+      <button class="tab" data-tab="wods">🏋️ WOD</button>
+      <button class="tab" data-tab="teams">👥 Team</button>
+      <button class="tab" data-tab="schedule">📅 Calendario</button>
+      <button class="tab" data-tab="leaderboard">🏆 Classifica</button>
+      <button class="tab" data-tab="settings">⚙️ Impostazioni</button>
+    </div>
+    
+    <!-- INFO TAB -->
+    <div class="tab-content active" id="tab-info">
+      <div class="card">
+        <h3>📋 Informazioni Season</h3>
+        <div class="form-group">
+          <label>Nome Season</label>
+          <input type="text" id="seasonName" placeholder="ARK Season 2026">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data Inizio</label>
+            <input type="date" id="startDate">
+          </div>
+          <div class="form-group">
+            <label>Data Fine</label>
+            <input type="date" id="endDate">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Giorno Gare</label>
+            <select id="slotDay">
+              <option value="saturday">Sabato</option>
+              <option value="sunday">Domenica</option>
+              <option value="friday">Venerdì</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Orario</label>
+            <input type="time" id="slotTime" value="10:00">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Team per Slot (per categoria)</label>
+            <input type="number" id="teamsPerSlot" value="6" min="2" max="12">
+          </div>
+          <div class="form-group">
+            <label>Prezzo Iscrizione (€)</label>
+            <input type="number" id="price" value="50" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Categorie (una per riga)</label>
+          <textarea id="categories" rows="3">RX
+Scaled
+Beginner</textarea>
+        </div>
+        <div class="form-group">
+          <label>Descrizione</label>
+          <textarea id="description" rows="4" placeholder="Descrivi la season..."></textarea>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>📊 Riepilogo</h3>
+        <div id="seasonSummary">
+          <p style="color:#888">Compila i campi per vedere il riepilogo</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- WODS TAB -->
+    <div class="tab-content" id="tab-wods">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <h3>🏋️ Workout della Season</h3>
+          <button class="btn btn-primary" onclick="addWod()">+ Aggiungi WOD</button>
+        </div>
+        <div class="wod-list" id="wodList">
+          <div class="empty-state">
+            <div class="icon">🏋️</div>
+            <p>Nessun WOD ancora. Clicca "Aggiungi WOD" o usa il generatore AI.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>🤖 Genera WOD con AI</h3>
+        <div class="form-group">
+          <label>Quanti WOD generare?</label>
+          <input type="number" id="aiWodCount" value="12" min="1" max="52">
+        </div>
+        <div class="form-group">
+          <label>Stile (opzionale)</label>
+          <input type="text" id="aiWodStyle" placeholder="Es: CrossFit classico, funzionale, forza...">
+        </div>
+        <button class="btn btn-success" onclick="generateWodsAI()">🤖 Genera con AI</button>
+      </div>
+    </div>
+    
+    <!-- TEAMS TAB -->
+    <div class="tab-content" id="tab-teams">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <h3>👥 Team Iscritti</h3>
+          <span id="teamCount">0 team</span>
+        </div>
+        <div class="team-grid" id="teamGrid">
+          <div class="empty-state" style="grid-column:1/-1;">
+            <div class="icon">👥</div>
+            <p>Nessun team iscritto ancora</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>📨 Invita Team</h3>
+        <p style="color:#888;margin-bottom:15px;">Condividi questo link per permettere ai team di iscriversi:</p>
+        <div style="display:flex;gap:10px;">
+          <input type="text" id="inviteLink" readonly style="flex:1;background:rgba(0,0,0,0.5);">
+          <button class="btn btn-secondary" onclick="copyInviteLink()">📋 Copia</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SCHEDULE TAB -->
+    <div class="tab-content" id="tab-schedule">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+          <h3>📅 Calendario Season</h3>
+          <button class="btn btn-primary" onclick="generateSchedule()">🔄 Genera Calendario</button>
+        </div>
+        <div id="scheduleList">
+          <div class="empty-state">
+            <div class="icon">📅</div>
+            <p>Calendario non ancora generato.<br>Aggiungi WOD e team, poi clicca "Genera Calendario".</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- LEADERBOARD TAB -->
+    <div class="tab-content" id="tab-leaderboard">
+      <div class="card">
+        <h3>🏆 Classifica Season</h3>
+        <div id="leaderboardContainer">
+          <div class="empty-state">
+            <div class="icon">🏆</div>
+            <p>La classifica apparirà quando i team inizieranno a competere</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SETTINGS TAB -->
+    <div class="tab-content" id="tab-settings">
+      <div class="card">
+        <h3>⚙️ Sistema Punteggio</h3>
+        <div class="form-group">
+          <label>Punti per posizione (JSON)</label>
+          <textarea id="pointsSystem" rows="6">{
+  "1": 100,
+  "2": 85,
+  "3": 70,
+  "4": 55,
+  "5": 40,
+  "6": 25
+}</textarea>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>🔒 Stato Season</h3>
+        <div class="form-group">
+          <label>Stato</label>
+          <select id="seasonStatus">
+            <option value="draft">📝 Bozza</option>
+            <option value="registration">📨 Iscrizioni Aperte</option>
+            <option value="active">🟢 In Corso</option>
+            <option value="completed">✅ Completata</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="card" style="border-color:#e74c3c;">
+        <h3 style="color:#e74c3c;">⚠️ Zona Pericolosa</h3>
+        <button class="btn" style="background:#e74c3c;color:white;" onclick="deleteSeason()">🗑️ Elimina Season</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="cta-bar">
+    <button class="btn btn-secondary" onclick="saveDraft()">💾 Salva Bozza</button>
+    <button class="btn btn-primary" onclick="saveAndPublish()">✅ Salva e Pubblica</button>
+  </div>
+
+  <script type="module">
+    import { DB } from '../firebase-config.js';
+    
+    const params = new URLSearchParams(location.search);
+    let seasonId = params.get('id');
+    let season = {};
+    let wods = [];
+    let teams = {};
+    let schedule = {};
+    
+    // Check auth
+    const session = localStorage.getItem('ark_admin_session');
+    if (!session) {
+      location.href = './';
+    }
+    const adminSession = JSON.parse(session);
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      };
+    });
+    
+    // Load existing season
+    if (seasonId) {
+      loadSeason();
+    } else {
+      // Set default dates
+      const today = new Date();
+      document.getElementById('startDate').value = today.toISOString().split('T')[0];
+      const endDate = new Date(today);
+      endDate.setMonth(endDate.getMonth() + 6);
+      document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+      updateSummary();
+    }
+    
+    async function loadSeason() {
+      season = await DB.get(`seasons/${seasonId}`) || {};
+      wods = Object.entries(await DB.get(`seasons/${seasonId}/workouts`) || {}).map(([id, w]) => ({...w, id}));
+      teams = await DB.get(`seasons/${seasonId}/teams`) || {};
+      schedule = await DB.get(`seasons/${seasonId}/schedule`) || {};
+      
+      // Populate form
+      document.getElementById('pageTitle').textContent = season.name || 'Modifica Season';
+      document.getElementById('seasonName').value = season.name || '';
+      document.getElementById('startDate').value = season.startDate || '';
+      document.getElementById('endDate').value = season.endDate || '';
+      document.getElementById('slotDay').value = season.slotDay || 'saturday';
+      document.getElementById('slotTime').value = season.slotTime || '10:00';
+      document.getElementById('teamsPerSlot').value = season.teamsPerSlot || 6;
+      document.getElementById('price').value = season.price || 50;
+      document.getElementById('categories').value = (season.categories || ['RX', 'Scaled']).join('\n');
+      document.getElementById('description').value = season.description || '';
+      document.getElementById('seasonStatus').value = season.status || 'draft';
+      if (season.pointsSystem) {
+        document.getElementById('pointsSystem').value = JSON.stringify(season.pointsSystem, null, 2);
+      }
+      
+      updateStatusBadge(season.status);
+      updateSummary();
+      renderWods();
+      renderTeams();
+      renderSchedule();
+      renderLeaderboard();
+      updateInviteLink();
+    }
+    
+    function updateStatusBadge(status) {
+      const badge = document.getElementById('statusBadge');
+      badge.className = 'status-badge status-' + (status || 'draft');
+      const labels = { draft: 'Bozza', registration: 'Iscrizioni', active: 'In Corso', completed: 'Completata' };
+      badge.textContent = labels[status] || 'Bozza';
+    }
+    
+    function updateSummary() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const day = document.getElementById('slotDay').value;
+      const teamsPerSlot = parseInt(document.getElementById('teamsPerSlot').value) || 6;
+      const categories = document.getElementById('categories').value.split('\n').filter(c => c.trim());
+      
+      if (!start || !end) {
+        document.getElementById('seasonSummary').innerHTML = '<p style="color:#888">Inserisci le date</p>';
+        return;
+      }
+      
+      const weeks = Math.ceil((new Date(end) - new Date(start)) / (7 * 24 * 60 * 60 * 1000));
+      const dayNames = { saturday: 'Sabato', sunday: 'Domenica', friday: 'Venerdì' };
+      
+      document.getElementById('seasonSummary').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:15px;">
+          <div><span style="color:#888">Durata:</span> <strong>${weeks} settimane</strong></div>
+          <div><span style="color:#888">Giorno:</span> <strong>Ogni ${dayNames[day]}</strong></div>
+          <div><span style="color:#888">Categorie:</span> <strong>${categories.length}</strong></div>
+          <div><span style="color:#888">Team/turno:</span> <strong>${teamsPerSlot * categories.length}</strong></div>
+          <div><span style="color:#888">WOD previsti:</span> <strong>${weeks}</strong></div>
+          <div><span style="color:#888">WOD creati:</span> <strong>${wods.length}</strong></div>
+        </div>
+      `;
+    }
+    
+    // Listen for form changes
+    ['seasonName', 'startDate', 'endDate', 'slotDay', 'teamsPerSlot', 'categories'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateSummary);
+    });
+    
+    function renderWods() {
+      const list = document.getElementById('wodList');
+      if (wods.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">🏋️</div><p>Nessun WOD ancora</p></div>`;
+        return;
+      }
+      
+      wods.sort((a, b) => (a.weekNumber || 0) - (b.weekNumber || 0));
+      
+      list.innerHTML = wods.map((w, i) => `
+        <div class="wod-item">
+          <div class="week">${w.weekNumber || i + 1}</div>
+          <div class="info">
+            <h4>${w.name || 'WOD ' + (i + 1)}</h4>
+            <p>${w.type || 'For Time'} · ${(w.timeCapSec || 600) / 60} min</p>
+          </div>
+          <div class="actions">
+            <button onclick="editWod('${w.id}')">✏️</button>
+            <button onclick="deleteWod('${w.id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function renderTeams() {
+      const grid = document.getElementById('teamGrid');
+      const teamList = Object.entries(teams);
+      document.getElementById('teamCount').textContent = teamList.length + ' team';
+      
+      if (teamList.length === 0) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">👥</div><p>Nessun team iscritto</p></div>`;
+        return;
+      }
+      
+      grid.innerHTML = teamList.map(([id, t]) => `
+        <div class="team-card">
+          <div class="emoji">${t.emoji || '🏆'}</div>
+          <h4>${t.name}</h4>
+          <div class="category">${t.category}</div>
+          <div class="stats">
+            ${(t.completedWods || []).length}/${wods.length} WOD completati<br>
+            ${(t.availability || []).length} disponibilità
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function renderSchedule() {
+      const container = document.getElementById('scheduleList');
+      const dates = Object.keys(schedule).sort();
+      
+      if (dates.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">📅</div><p>Genera il calendario</p></div>`;
+        return;
+      }
+      
+      container.innerHTML = dates.map(date => {
+        const week = schedule[date];
+        const wod = wods.find(w => w.id === week.wodId);
+        const categories = Object.keys(week.slots || {});
+        
+        return `
+          <div class="schedule-week">
+            <div class="header">
+              <span class="date">📅 ${formatDate(date)}</span>
+              <span class="wod">🏋️ ${wod?.name || 'TBD'}</span>
+              <span class="status-badge status-${week.status || 'scheduled'}">${week.status || 'Programmato'}</span>
+            </div>
+            <div class="slots">
+              ${categories.map(cat => `
+                <div class="slot">
+                  <h5>${cat}</h5>
+                  <div class="teams">${(week.slots[cat] || []).map(tid => teams[tid]?.name || tid).join(', ') || 'Nessun team'}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderLeaderboard() {
+      // TODO: Calculate from scores
+      document.getElementById('leaderboardContainer').innerHTML = `
+        <div class="empty-state"><div class="icon">🏆</div><p>Classifica disponibile quando inizia la season</p></div>
+      `;
+    }
+    
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+    
+    function updateInviteLink() {
+      const link = `${location.origin}/app/season.html?id=${seasonId || 'NEW'}`;
+      document.getElementById('inviteLink').value = link;
+    }
+    
+    window.copyInviteLink = () => {
+      const input = document.getElementById('inviteLink');
+      input.select();
+      document.execCommand('copy');
+      alert('Link copiato!');
+    };
+    
+    // WOD functions
+    window.addWod = () => {
+      const weekNum = wods.length + 1;
+      const newWod = {
+        id: 'wod_' + Date.now(),
+        weekNumber: weekNum,
+        name: 'Week ' + weekNum,
+        type: 'fortime',
+        timeCapSec: 600,
+        movements: []
+      };
+      wods.push(newWod);
+      renderWods();
+      updateSummary();
+    };
+    
+    window.editWod = (wodId) => {
+      // TODO: Open modal for editing
+      alert('Edit WOD: ' + wodId);
+    };
+    
+    window.deleteWod = (wodId) => {
+      if (!confirm('Eliminare questo WOD?')) return;
+      wods = wods.filter(w => w.id !== wodId);
+      renderWods();
+      updateSummary();
+    };
+    
+    window.generateWodsAI = async () => {
+      const count = parseInt(document.getElementById('aiWodCount').value) || 12;
+      const style = document.getElementById('aiWodStyle').value || 'CrossFit classico';
+      
+      alert('🤖 Generazione AI in arrivo! (Groq API)\n\nGenererà ' + count + ' WOD stile: ' + style);
+      // TODO: Implement Groq API call
+    };
+    
+    // Schedule generator
+    window.generateSchedule = () => {
+      const start = new Date(document.getElementById('startDate').value);
+      const end = new Date(document.getElementById('endDate').value);
+      const dayMap = { saturday: 6, sunday: 0, friday: 5 };
+      const targetDay = dayMap[document.getElementById('slotDay').value];
+      const teamsPerSlot = parseInt(document.getElementById('teamsPerSlot').value) || 6;
+      const categories = document.getElementById('categories').value.split('\n').filter(c => c.trim());
+      
+      if (wods.length === 0) {
+        alert('Aggiungi prima dei WOD!');
+        return;
+      }
+      
+      // Find all target days in range
+      const dates = [];
+      let current = new Date(start);
+      while (current <= end) {
+        if (current.getDay() === targetDay) {
+          dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      
+      // Create schedule
+      schedule = {};
+      const teamList = Object.entries(teams);
+      
+      dates.forEach((date, i) => {
+        const wodIndex = i % wods.length;
+        const wod = wods[wodIndex];
+        
+        const slots = {};
+        categories.forEach(cat => {
+          // Get teams in this category that are available and haven't done this WOD
+          const available = teamList.filter(([id, t]) => 
+            t.category === cat &&
+            (t.availability || []).includes(date) &&
+            !(t.completedWods || []).includes(wod.id)
+          );
+          
+          // Take up to teamsPerSlot
+          slots[cat] = available.slice(0, teamsPerSlot).map(([id]) => id);
+        });
+        
+        schedule[date] = {
+          wodId: wod.id,
+          slots,
+          status: 'scheduled'
+        };
+      });
+      
+      renderSchedule();
+      alert(`✅ Calendario generato!\n${dates.length} settimane programmate`);
+    };
+    
+    // Save functions
+    async function getFormData() {
+      return {
+        name: document.getElementById('seasonName').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        slotDay: document.getElementById('slotDay').value,
+        slotTime: document.getElementById('slotTime').value,
+        teamsPerSlot: parseInt(document.getElementById('teamsPerSlot').value),
+        price: parseFloat(document.getElementById('price').value),
+        categories: document.getElementById('categories').value.split('\n').filter(c => c.trim()),
+        description: document.getElementById('description').value,
+        status: document.getElementById('seasonStatus').value,
+        pointsSystem: JSON.parse(document.getElementById('pointsSystem').value || '{}'),
+        adminId: adminSession.id,
+        updatedAt: Date.now()
+      };
+    }
+    
+    window.saveDraft = async () => {
+      const data = await getFormData();
+      data.status = 'draft';
+      
+      if (!seasonId) {
+        seasonId = 'season_' + Date.now();
+        data.createdAt = Date.now();
+      }
+      
+      await DB.set(`seasons/${seasonId}`, data);
+      
+      // Save WODs
+      for (const wod of wods) {
+        await DB.set(`seasons/${seasonId}/workouts/${wod.id}`, wod);
+      }
+      
+      // Save schedule
+      for (const [date, week] of Object.entries(schedule)) {
+        await DB.set(`seasons/${seasonId}/schedule/${date}`, week);
+      }
+      
+      alert('✅ Bozza salvata!');
+      history.replaceState(null, '', `?id=${seasonId}`);
+      updateInviteLink();
+    };
+    
+    window.saveAndPublish = async () => {
+      const data = await getFormData();
+      if (data.status === 'draft') data.status = 'registration';
+      
+      if (!seasonId) {
+        seasonId = 'season_' + Date.now();
+        data.createdAt = Date.now();
+      }
+      
+      await DB.set(`seasons/${seasonId}`, data);
+      
+      for (const wod of wods) {
+        await DB.set(`seasons/${seasonId}/workouts/${wod.id}`, wod);
+      }
+      
+      for (const [date, week] of Object.entries(schedule)) {
+        await DB.set(`seasons/${seasonId}/schedule/${date}`, week);
+      }
+      
+      updateStatusBadge(data.status);
+      alert('✅ Season pubblicata!');
+      history.replaceState(null, '', `?id=${seasonId}`);
+      updateInviteLink();
+    };
+    
+    window.deleteSeason = async () => {
+      if (!seasonId) return;
+      if (!confirm('⚠️ Eliminare definitivamente questa season?')) return;
+      if (!confirm('ULTIMA CONFERMA: Tutti i dati verranno persi!')) return;
+      
+      await DB.remove(`seasons/${seasonId}`);
+      location.href = './';
+    };
+  </script>
+</body>
+</html>
