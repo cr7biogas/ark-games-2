@@ -465,21 +465,21 @@ Scaled</textarea>
           </button>
         </div>
         
-        <a href="../regia.html" id="regiaLink" class="action-btn primary" style="display:block;text-align:center;padding:25px;font-size:1.2rem;text-decoration:none;border-radius:16px;background:linear-gradient(135deg, #e74c3c, #c0392b);color:white;margin-bottom:20px;">
+        <a href="#" onclick="openWithCompId('../regia.html')" class="action-btn primary" style="display:block;text-align:center;padding:25px;font-size:1.2rem;text-decoration:none;border-radius:16px;background:linear-gradient(135deg, #e74c3c, #c0392b);color:white;margin-bottom:20px;">
           ⏱️ Apri Regia & Timer →
         </a>
         
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
-          <a href="../judge.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+          <a href="#" onclick="openWithCompId('../judge.html')" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
             ⚖️ Giudici
           </a>
-          <a href="../live/leaderboard.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+          <a href="#" onclick="openWithCompId('../live/leaderboard.html')" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
             🏆 Classifica
           </a>
-          <a href="../live/tv.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+          <a href="#" onclick="openWithCompId('../live/tv.html')" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
             📺 TV Display
           </a>
-          <a href="../stream-webrtc.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+          <a href="#" onclick="openWithCompId('../stream-webrtc.html')" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
             📹 Regia Camere
           </a>
         </div>
@@ -921,8 +921,11 @@ Scaled</textarea>
     window.toggleLiveStatus = async () => {
       if (!compId) { alert('Salva prima la gara'); return; }
       
-      const current = competition.status;
+      // Reload competition status from Firebase to be sure
+      const freshComp = await DB.get(`competitions/${compId}`);
+      const current = freshComp?.status || competition.status || 'upcoming';
       const newStatus = current === 'live' ? 'upcoming' : 'live';
+      console.log('Toggle LIVE:', current, '→', newStatus);
       
       if (newStatus === 'live') {
         if (!confirm('Vuoi AVVIARE la gara? Diventerà visibile come LIVE.')) return;
@@ -955,6 +958,16 @@ Scaled</textarea>
     
     // Update button when LIVE tab is clicked
     document.querySelector('[data-tab="live"]')?.addEventListener('click', updateLiveButton);
+    
+    // Open page with compId parameter
+    window.openWithCompId = (url) => {
+      if (!compId) {
+        alert('Salva prima la gara');
+        return;
+      }
+      const separator = url.includes('?') ? '&' : '?';
+      location.href = url + separator + 'c=' + compId;
+    };
   </script>
 </body>
 </html>
