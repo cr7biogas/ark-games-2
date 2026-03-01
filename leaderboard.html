@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🏆 Leaderboard - ARK Games 2.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a12;
+      color: #fff;
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      padding: 20px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+    .header p {
+      color: #888;
+      font-size: 14px;
+    }
+    
+    .tabs {
+      display: flex;
+      background: #1a1a2e;
+      padding: 10px;
+      gap: 8px;
+      overflow-x: auto;
+      justify-content: center;
+    }
+    .tab {
+      padding: 12px 24px;
+      border-radius: 25px;
+      border: none;
+      background: #333;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+    }
+    .tab:hover:not(.active) {
+      background: #444;
+    }
+    
+    .content {
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .leaderboard {
+      background: #1a1a2e;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    
+    .lb-header {
+      display: grid;
+      grid-template-columns: 60px 1fr repeat(var(--wod-count, 4), 80px) 80px;
+      padding: 15px 20px;
+      background: #252542;
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .lb-row {
+      display: grid;
+      grid-template-columns: 60px 1fr repeat(var(--wod-count, 4), 80px) 80px;
+      padding: 15px 20px;
+      border-bottom: 1px solid #333;
+      align-items: center;
+      transition: background 0.2s;
+    }
+    .lb-row:last-child {
+      border-bottom: none;
+    }
+    .lb-row:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    
+    .lb-rank {
+      font-size: 24px;
+      font-weight: 800;
+      color: #888;
+    }
+    .lb-row:nth-child(1) .lb-rank { color: #ffd700; }
+    .lb-row:nth-child(2) .lb-rank { color: #c0c0c0; }
+    .lb-row:nth-child(3) .lb-rank { color: #cd7f32; }
+    
+    .lb-team {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .lb-team .emoji {
+      font-size: 32px;
+    }
+    .lb-team .name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .lb-score {
+      text-align: center;
+      font-size: 14px;
+    }
+    .lb-score .value {
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .lb-score .rank {
+      color: #888;
+      font-size: 11px;
+    }
+    
+    .lb-total {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: #e94560;
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+    }
+    
+    .live-badge {
+      display: inline-block;
+      background: #e94560;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 10px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .fullscreen-btn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 100;
+    }
+    .fullscreen-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body>
+  <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+  
+  <div class="header">
+    <h1 id="compTitle">🏆 ARK Games <span class="live-badge">LIVE</span></h1>
+    <p id="compDate"></p>
+  </div>
+  
+  <div class="tabs" id="categoryTabs">
+    <!-- Dynamic -->
+  </div>
+  
+  <div class="content">
+    <div class="leaderboard" id="leaderboard">
+      <div class="empty">Caricamento...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    const compId = localStorage.getItem('ark2_compId');
+    if (!compId) {
+      location.href = 'index.html';
+    }
+    
+    let competition = null;
+    let categories = [];
+    let currentCategory = null;
+    let teams = {};
+    let workouts = {};
+    let scores = {};
+    
+    window.toggleFullscreen = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    };
+    
+    async function init() {
+      competition = await DB.get(`competitions/${compId}`);
+      if (!competition) {
+        alert('Gara non trovata');
+        location.href = 'index.html';
+        return;
+      }
+      
+      document.getElementById('compTitle').innerHTML = `🏆 ${competition.name || 'ARK Games'} <span class="live-badge">LIVE</span>`;
+      document.getElementById('compDate').textContent = competition.date || '';
+      
+      categories = competition.categories || ['Experience', 'Scaled', 'Open'];
+      currentCategory = categories[0];
+      
+      renderTabs();
+      loadData();
+      
+      // Auto-rotate categories
+      setInterval(() => {
+        const idx = categories.indexOf(currentCategory);
+        currentCategory = categories[(idx + 1) % categories.length];
+        updateActivTab();
+        renderLeaderboard();
+      }, 20000);
+    }
+    
+    function renderTabs() {
+      const container = document.getElementById('categoryTabs');
+      container.innerHTML = categories.map(cat => `
+        <button class="tab ${cat === currentCategory ? 'active' : ''}" onclick="selectCategory('${cat}')">${cat}</button>
+      `).join('');
+    }
+    
+    function updateActivTab() {
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.textContent === currentCategory);
+      });
+    }
+    
+    window.selectCategory = (cat) => {
+      currentCategory = cat;
+      updateActivTab();
+      renderLeaderboard();
+    };
+    
+    async function loadData() {
+      teams = await DB.get(`competitions/${compId}/teams`) || {};
+      workouts = await DB.get(`competitions/${compId}/workouts`) || {};
+      scores = await DB.get(`competitions/${compId}/scores`) || {};
+      
+      renderLeaderboard();
+      
+      // Listen for score updates
+      DB.listen(`competitions/${compId}/scores`, (newScores) => {
+        scores = newScores || {};
+        renderLeaderboard();
+      });
+    }
+    
+    function renderLeaderboard() {
+      const lb = document.getElementById('leaderboard');
+      
+      // Get teams in current category
+      const catTeams = Object.entries(teams)
+        .filter(([id, t]) => t.category === currentCategory)
+        .map(([id, t]) => ({ id, ...t }));
+      
+      if (catTeams.length === 0) {
+        lb.innerHTML = '<div class="empty">Nessun team in questa categoria</div>';
+        return;
+      }
+      
+      // Get workouts for this category
+      const catWorkouts = Object.entries(workouts)
+        .filter(([id, w]) => !w.categories || w.categories.includes(currentCategory))
+        .map(([id, w]) => ({ id, ...w }));
+      
+      const wodCount = catWorkouts.length;
+      lb.style.setProperty('--wod-count', wodCount);
+      
+      // Calculate rankings for each WOD
+      const wodRankings = {};
+      catWorkouts.forEach(wod => {
+        const wodScores = catTeams.map(team => {
+          const scoreKey = `${team.id}_${wod.id}`;
+          const score = scores[scoreKey];
+          return {
+            teamId: team.id,
+            time: score?.time,
+            reps: score?.reps,
+            hasScore: !!score
+          };
+        }).filter(s => s.hasScore);
+        
+        // Sort: For Time = lower time better, AMRAP = higher reps better
+        if (wod.type === 'fortime') {
+          wodScores.sort((a, b) => {
+            if (a.time && b.time) return a.time - b.time;
+            if (a.time) return -1;
+            if (b.time) return 1;
+            return (b.reps || 0) - (a.reps || 0);
+          });
+        } else {
+          wodScores.sort((a, b) => (b.reps || 0) - (a.reps || 0));
+        }
+        
+        // Assign ranks
+        wodRankings[wod.id] = {};
+        wodScores.forEach((s, i) => {
+          wodRankings[wod.id][s.teamId] = {
+            rank: i + 1,
+            time: s.time,
+            reps: s.reps
+          };
+        });
+      });
+      
+      // Calculate total points
+      const teamPoints = catTeams.map(team => {
+        let total = 0;
+        catWorkouts.forEach(wod => {
+          const ranking = wodRankings[wod.id]?.[team.id];
+          if (ranking) {
+            total += ranking.rank;
+          } else {
+            // No score = last place points
+            total += catTeams.length;
+          }
+        });
+        return { ...team, total };
+      });
+      
+      // Sort by total points (lower is better)
+      teamPoints.sort((a, b) => a.total - b.total);
+      
+      // Render
+      lb.innerHTML = `
+        <div class="lb-header">
+          <div>#</div>
+          <div>Team</div>
+          ${catWorkouts.map(w => `<div style="text-align:center">${w.name}</div>`).join('')}
+          <div style="text-align:center">Tot</div>
+        </div>
+        ${teamPoints.map((team, i) => `
+          <div class="lb-row">
+            <div class="lb-rank">${i + 1}</div>
+            <div class="lb-team">
+              <span class="emoji">${team.emoji}</span>
+              <span class="name">${team.name}</span>
+            </div>
+            ${catWorkouts.map(wod => {
+              const ranking = wodRankings[wod.id]?.[team.id];
+              if (!ranking) return '<div class="lb-score"><span class="value">-</span></div>';
+              
+              let display = '';
+              if (ranking.time) {
+                const m = Math.floor(ranking.time / 60);
+                const s = ranking.time % 60;
+                display = `${m}:${s.toString().padStart(2, '0')}`;
+              } else if (ranking.reps) {
+                display = ranking.reps;
+              }
+              
+              return `
+                <div class="lb-score">
+                  <div class="value">${display}</div>
+                  <div class="rank">${ranking.rank}°</div>
+                </div>
+              `;
+            }).join('')}
+            <div class="lb-total">${team.total}</div>
+          </div>
+        `).join('')}
+      `;
+    }
+    
+    init();
+  </script>
+</body>
+</html>

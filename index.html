@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🏋️ ARK Games 2.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .logo {
+      font-size: 80px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 5px;
+    }
+    .version {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 40px;
+    }
+    .competitions {
+      margin-bottom: 30px;
+    }
+    .comp-card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .comp-card:hover {
+      background: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+    .comp-emoji {
+      font-size: 40px;
+    }
+    .comp-info h3 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    .comp-info p {
+      color: #888;
+      font-size: 13px;
+    }
+    .comp-status {
+      margin-left: auto;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-live { background: #e94560; }
+    .status-upcoming { background: #3498db; }
+    .status-ended { background: #666; }
+    .empty {
+      color: #666;
+      padding: 40px;
+    }
+    .nav-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .nav-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .nav-btn.primary {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      grid-column: span 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🏋️</div>
+    <h1>ARK Games</h1>
+    <p class="version">2.0</p>
+    
+    <div class="competitions" id="competitions">
+      <div class="empty">Caricamento...</div>
+    </div>
+    
+    <div class="nav-buttons">
+      <button class="nav-btn primary" onclick="location.href='admin.html'">
+        ⚙️ Admin / Crea Gara
+      </button>
+      <button class="nav-btn" onclick="location.href='judge.html'">
+        📋 Giudice
+      </button>
+      <button class="nav-btn" onclick="location.href='leaderboard.html'">
+        🏆 Leaderboard
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    async function loadCompetitions() {
+      const comps = await DB.get('competitions');
+      const container = document.getElementById('competitions');
+      
+      if (!comps) {
+        container.innerHTML = '<div class="empty">Nessuna gara creata.<br>Vai su Admin per iniziare!</div>';
+        return;
+      }
+      
+      container.innerHTML = '';
+      
+      Object.entries(comps).forEach(([id, comp]) => {
+        const status = comp.status || 'upcoming';
+        const statusLabel = { live: 'LIVE', upcoming: 'Prossima', ended: 'Conclusa' }[status];
+        
+        const card = document.createElement('div');
+        card.className = 'comp-card';
+        card.onclick = () => selectCompetition(id);
+        card.innerHTML = `
+          <div class="comp-emoji">🐾</div>
+          <div class="comp-info">
+            <h3>${comp.name || 'Gara'}</h3>
+            <p>${comp.date || 'Data non impostata'}</p>
+          </div>
+          <span class="comp-status status-${status}">${statusLabel}</span>
+        `;
+        container.appendChild(card);
+      });
+    }
+    
+    function selectCompetition(id) {
+      localStorage.setItem('ark2_compId', id);
+      location.href = 'leaderboard.html';
+    }
+    
+    loadCompetitions();
+  </script>
+</body>
+</html>

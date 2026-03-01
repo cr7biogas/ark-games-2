@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>⚙️ Admin - ARK Games 2.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      min-height: 100vh;
+    }
+    .header {
+      background: #1a1a2e;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      border-bottom: 1px solid #333;
+    }
+    .header h1 { font-size: 20px; }
+    .back { text-decoration: none; font-size: 24px; }
+    
+    .tabs {
+      display: flex;
+      background: #1a1a2e;
+      padding: 0 10px;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 15px 20px;
+      border: none;
+      background: none;
+      color: #888;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+    }
+    .tab.active {
+      color: #fff;
+      border-bottom-color: #e94560;
+    }
+    
+    .content {
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .section {
+      display: none;
+    }
+    .section.active {
+      display: block;
+    }
+    
+    .card {
+      background: #1a1a2e;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+    .card h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #0f0f1a;
+      color: #fff;
+      font-size: 15px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+    textarea { resize: vertical; min-height: 100px; }
+    
+    .btn {
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #333;
+      color: #fff;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    
+    .list-item {
+      background: #0f0f1a;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .list-item .emoji { font-size: 28px; }
+    .list-item .info { flex: 1; }
+    .list-item .info h4 { font-size: 15px; margin-bottom: 3px; }
+    .list-item .info p { color: #888; font-size: 12px; }
+    .list-item .actions { display: flex; gap: 8px; }
+    .list-item .actions button {
+      background: #333;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+    .list-item .actions button:hover { background: #444; }
+    .list-item .actions .delete:hover { background: #e94560; }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    .status-bar {
+      background: #1a1a2e;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: #888;
+      border-top: 1px solid #333;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    .chip {
+      display: inline-block;
+      background: #333;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin: 2px;
+    }
+    
+    .movement-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .movement-row input:first-child { flex: 2; }
+    .movement-row input:nth-child(2) { flex: 1; }
+    .movement-row button {
+      background: #e94560;
+      border: none;
+      width: 36px;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* Timeline */
+    .heat-card {
+      background: #0f0f1a;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-left: 4px solid #333;
+    }
+    .heat-card.exp { border-left-color: #2ecc71; }
+    .heat-card.scaled { border-left-color: #3498db; }
+    .heat-card.open { border-left-color: #e94560; }
+    .heat-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .heat-time { color: #888; font-size: 13px; }
+    .heat-lanes {
+      display: flex;
+      gap: 10px;
+    }
+    .lane {
+      flex: 1;
+      background: #1a1a2e;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="index.html" class="back">←</a>
+    <h1>⚙️ Admin</h1>
+    <span id="compName" style="margin-left:auto;color:#888;font-size:14px"></span>
+  </div>
+  
+  <div class="tabs">
+    <button class="tab active" data-tab="gara">🏆 Gara</button>
+    <button class="tab" data-tab="wod">💪 WOD</button>
+    <button class="tab" data-tab="teams">👥 Team</button>
+    <button class="tab" data-tab="timeline">📅 Timeline</button>
+    <button class="tab" data-tab="control">🎮 Controllo</button>
+  </div>
+  
+  <div class="content">
+    <!-- GARA -->
+    <div class="section active" id="sec-gara">
+      <div class="card">
+        <h2>🏆 Informazioni Gara</h2>
+        <div class="form-group">
+          <label>Nome Gara</label>
+          <input type="text" id="compNameInput" placeholder="Es: ARK Games 2026">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="compDate">
+          </div>
+          <div class="form-group">
+            <label>Numero Lane</label>
+            <input type="number" id="compLanes" value="3" min="1" max="6">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Categorie (una per riga)</label>
+          <textarea id="compCategories" placeholder="Experience&#10;Scaled&#10;Open">Experience
+Scaled
+Open</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveCompetition()">💾 Salva Gara</button>
+      </div>
+    </div>
+    
+    <!-- WOD -->
+    <div class="section" id="sec-wod">
+      <div class="card">
+        <h2>➕ Nuovo WOD</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome WOD</label>
+            <input type="text" id="wodName" placeholder="Es: WOD A">
+          </div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="wodType">
+              <option value="fortime">For Time</option>
+              <option value="amrap">AMRAP</option>
+              <option value="emom">EMOM</option>
+              <option value="tabata">Tabata</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Time Cap (minuti)</label>
+          <input type="number" id="wodTimeCap" value="10" min="1" max="60">
+        </div>
+        <div class="form-group">
+          <label>Movimenti</label>
+          <div id="movements">
+            <div class="movement-row">
+              <input type="text" placeholder="Movimento (es: Thruster)">
+              <input type="text" placeholder="Reps (es: 21-15-9)">
+              <button onclick="this.parentElement.remove()">×</button>
+            </div>
+          </div>
+          <button class="btn btn-secondary" onclick="addMovement()" style="margin-top:10px">+ Aggiungi Movimento</button>
+        </div>
+        <div class="form-group">
+          <label>Categorie che fanno questo WOD</label>
+          <div id="wodCategories"></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveWod()">💾 Salva WOD</button>
+      </div>
+      
+      <div class="card">
+        <h2>📋 WOD Creati</h2>
+        <div id="wodList">
+          <div class="empty-state">Nessun WOD creato</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TEAMS -->
+    <div class="section" id="sec-teams">
+      <div class="card">
+        <h2>➕ Nuovo Team</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome Team</label>
+            <input type="text" id="teamName" placeholder="Es: Leoni">
+          </div>
+          <div class="form-group">
+            <label>Emoji</label>
+            <input type="text" id="teamEmoji" placeholder="🦁" maxlength="4">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="teamCategory"></select>
+        </div>
+        <button class="btn btn-primary" onclick="saveTeam()">💾 Salva Team</button>
+      </div>
+      
+      <div class="card">
+        <h2>👥 Team</h2>
+        <div id="teamList">
+          <div class="empty-state">Nessun team creato</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TIMELINE -->
+    <div class="section" id="sec-timeline">
+      <div class="card">
+        <h2>📅 Genera Timeline</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Orario Inizio</label>
+            <input type="time" id="startTime" value="09:00">
+          </div>
+          <div class="form-group">
+            <label>Pausa tra Heat (min)</label>
+            <input type="number" id="pauseMin" value="3" min="1" max="10">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="generateTimeline()">🔄 Genera Timeline</button>
+      </div>
+      
+      <div class="card">
+        <h2>📋 Timeline</h2>
+        <div id="timelineList">
+          <div class="empty-state">Timeline non generata</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- CONTROL -->
+    <div class="section" id="sec-control">
+      <div class="card">
+        <h2>🎮 Controllo Gara</h2>
+        <div id="judgeStatus">
+          <div class="empty-state">Nessun giudice connesso</div>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="startHeat()" id="startBtn" disabled>▶️ START</button>
+          <button class="btn btn-secondary" onclick="resetHeat()">🔄 Reset</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>📊 Heat Corrente</h2>
+        <div id="currentHeat">
+          <div class="empty-state">Nessuna heat attiva</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="status-bar">
+    <span id="statusText">Connesso</span>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    let compId = localStorage.getItem('ark2_compId');
+    let competition = null;
+    let categories = [];
+    
+    // Tab navigation
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
+      };
+    });
+    
+    // Add movement row
+    window.addMovement = () => {
+      const div = document.createElement('div');
+      div.className = 'movement-row';
+      div.innerHTML = `
+        <input type="text" placeholder="Movimento">
+        <input type="text" placeholder="Reps">
+        <button onclick="this.parentElement.remove()">×</button>
+      `;
+      document.getElementById('movements').appendChild(div);
+    };
+    
+    // Load competition
+    async function loadCompetition() {
+      if (!compId) {
+        // Create new competition
+        const newId = 'comp_' + Date.now();
+        await DB.set(`competitions/${newId}`, { name: '', date: '', status: 'upcoming', lanes: 3, categories: ['Experience', 'Scaled', 'Open'] });
+        compId = newId;
+        localStorage.setItem('ark2_compId', compId);
+      }
+      
+      competition = await DB.get(`competitions/${compId}`);
+      if (!competition) {
+        competition = { name: '', date: '', lanes: 3, categories: ['Experience', 'Scaled', 'Open'] };
+      }
+      
+      categories = competition.categories || ['Experience', 'Scaled', 'Open'];
+      
+      // Fill form
+      document.getElementById('compNameInput').value = competition.name || '';
+      document.getElementById('compDate').value = competition.date || '';
+      document.getElementById('compLanes').value = competition.lanes || 3;
+      document.getElementById('compCategories').value = categories.join('\n');
+      document.getElementById('compName').textContent = competition.name || 'Nuova Gara';
+      
+      updateCategorySelects();
+      loadWods();
+      loadTeams();
+      loadTimeline();
+    }
+    
+    function updateCategorySelects() {
+      // WOD categories checkboxes
+      const wodCats = document.getElementById('wodCategories');
+      wodCats.innerHTML = categories.map(c => `
+        <label style="display:inline-flex;align-items:center;gap:6px;margin-right:15px;cursor:pointer">
+          <input type="checkbox" value="${c}" checked> ${c}
+        </label>
+      `).join('');
+      
+      // Team category select
+      const teamCat = document.getElementById('teamCategory');
+      teamCat.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    
+    // Save competition
+    window.saveCompetition = async () => {
+      const name = document.getElementById('compNameInput').value.trim();
+      const date = document.getElementById('compDate').value;
+      const lanes = parseInt(document.getElementById('compLanes').value) || 3;
+      const cats = document.getElementById('compCategories').value.split('\n').map(c => c.trim()).filter(c => c);
+      
+      await DB.update(`competitions/${compId}`, { name, date, lanes, categories: cats });
+      categories = cats;
+      updateCategorySelects();
+      document.getElementById('compName').textContent = name;
+      alert('✅ Gara salvata!');
+    };
+    
+    // Save WOD
+    window.saveWod = async () => {
+      const name = document.getElementById('wodName').value.trim();
+      const type = document.getElementById('wodType').value;
+      const timeCap = parseInt(document.getElementById('wodTimeCap').value) * 60;
+      
+      const movements = [];
+      document.querySelectorAll('#movements .movement-row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0].value.trim()) {
+          movements.push({ name: inputs[0].value.trim(), reps: inputs[1].value.trim() });
+        }
+      });
+      
+      const selectedCats = [];
+      document.querySelectorAll('#wodCategories input:checked').forEach(cb => {
+        selectedCats.push(cb.value);
+      });
+      
+      if (!name) { alert('Inserisci nome WOD'); return; }
+      
+      const wodId = 'wod_' + Date.now();
+      await DB.set(`competitions/${compId}/workouts/${wodId}`, {
+        name, type, timeCapSec: timeCap, movements, categories: selectedCats
+      });
+      
+      document.getElementById('wodName').value = '';
+      loadWods();
+      alert('✅ WOD salvato!');
+    };
+    
+    async function loadWods() {
+      const wods = await DB.get(`competitions/${compId}/workouts`);
+      const list = document.getElementById('wodList');
+      
+      if (!wods) {
+        list.innerHTML = '<div class="empty-state">Nessun WOD creato</div>';
+        return;
+      }
+      
+      list.innerHTML = Object.entries(wods).map(([id, w]) => `
+        <div class="list-item">
+          <div class="emoji">💪</div>
+          <div class="info">
+            <h4>${w.name}</h4>
+            <p>${w.type.toUpperCase()} · ${w.timeCapSec/60} min · ${w.categories?.join(', ') || 'Tutte'}</p>
+            <p style="margin-top:4px">${w.movements?.map(m => m.name).join(', ') || ''}</p>
+          </div>
+          <div class="actions">
+            <button class="delete" onclick="deleteWod('${id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    window.deleteWod = async (id) => {
+      if (confirm('Eliminare questo WOD?')) {
+        await DB.remove(`competitions/${compId}/workouts/${id}`);
+        loadWods();
+      }
+    };
+    
+    // Save Team
+    window.saveTeam = async () => {
+      const name = document.getElementById('teamName').value.trim();
+      const emoji = document.getElementById('teamEmoji').value.trim() || '🐾';
+      const category = document.getElementById('teamCategory').value;
+      
+      if (!name) { alert('Inserisci nome team'); return; }
+      
+      const teamId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      await DB.set(`competitions/${compId}/teams/${teamId}`, { name, emoji, category });
+      
+      document.getElementById('teamName').value = '';
+      document.getElementById('teamEmoji').value = '';
+      loadTeams();
+      alert('✅ Team salvato!');
+    };
+    
+    async function loadTeams() {
+      const teams = await DB.get(`competitions/${compId}/teams`);
+      const list = document.getElementById('teamList');
+      
+      if (!teams) {
+        list.innerHTML = '<div class="empty-state">Nessun team creato</div>';
+        return;
+      }
+      
+      // Group by category
+      const grouped = {};
+      categories.forEach(c => grouped[c] = []);
+      
+      Object.entries(teams).forEach(([id, t]) => {
+        if (grouped[t.category]) {
+          grouped[t.category].push({ id, ...t });
+        }
+      });
+      
+      list.innerHTML = categories.map(cat => `
+        <h4 style="margin:15px 0 10px;color:#888">${cat} (${grouped[cat].length})</h4>
+        ${grouped[cat].map(t => `
+          <div class="list-item">
+            <div class="emoji">${t.emoji}</div>
+            <div class="info">
+              <h4>${t.name}</h4>
+            </div>
+            <div class="actions">
+              <button class="delete" onclick="deleteTeam('${t.id}')">🗑️</button>
+            </div>
+          </div>
+        `).join('') || '<div class="empty-state" style="padding:10px">Nessun team</div>'}
+      `).join('');
+    }
+    
+    window.deleteTeam = async (id) => {
+      if (confirm('Eliminare questo team?')) {
+        await DB.remove(`competitions/${compId}/teams/${id}`);
+        loadTeams();
+      }
+    };
+    
+    // Generate Timeline
+    window.generateTimeline = async () => {
+      const startTimeStr = document.getElementById('startTime').value;
+      const pauseMin = parseInt(document.getElementById('pauseMin').value) || 3;
+      
+      const wods = await DB.get(`competitions/${compId}/workouts`);
+      const teams = await DB.get(`competitions/${compId}/teams`);
+      const lanes = competition.lanes || 3;
+      
+      if (!wods || Object.keys(wods).length === 0) {
+        alert('Crea prima almeno un WOD!');
+        return;
+      }
+      if (!teams || Object.keys(teams).length === 0) {
+        alert('Crea prima almeno un team!');
+        return;
+      }
+      
+      // Clear existing timeline
+      await DB.remove(`competitions/${compId}/timeline`);
+      
+      const [startH, startM] = startTimeStr.split(':').map(Number);
+      let currentTime = startH * 60 + startM; // minutes from midnight
+      
+      let heatNum = 1;
+      
+      // For each WOD
+      for (const [wodId, wod] of Object.entries(wods)) {
+        const wodCats = wod.categories || categories;
+        
+        // For each category this WOD applies to
+        for (const cat of wodCats) {
+          // Get teams in this category
+          const catTeams = Object.entries(teams)
+            .filter(([id, t]) => t.category === cat)
+            .map(([id, t]) => ({ id, ...t }));
+          
+          // Create heats
+          for (let i = 0; i < catTeams.length; i += lanes) {
+            const heatTeams = catTeams.slice(i, i + lanes);
+            const laneAssignments = heatTeams.map(t => t.id);
+            
+            const h = Math.floor(currentTime / 60);
+            const m = currentTime % 60;
+            const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            
+            const heatId = `heat_${heatNum}`;
+            await DB.set(`competitions/${compId}/timeline/${heatId}`, {
+              number: heatNum,
+              wodId,
+              wodName: wod.name,
+              category: cat,
+              startTime: timeStr,
+              timeCapSec: wod.timeCapSec,
+              lanes: laneAssignments,
+              status: 'pending'
+            });
+            
+            // Add time for this heat + pause
+            currentTime += Math.ceil(wod.timeCapSec / 60) + pauseMin;
+            heatNum++;
+          }
+        }
+      }
+      
+      loadTimeline();
+      alert(`✅ Timeline generata: ${heatNum - 1} heat`);
+    };
+    
+    async function loadTimeline() {
+      const timeline = await DB.get(`competitions/${compId}/timeline`);
+      const teams = await DB.get(`competitions/${compId}/teams`) || {};
+      const list = document.getElementById('timelineList');
+      
+      if (!timeline) {
+        list.innerHTML = '<div class="empty-state">Timeline non generata</div>';
+        return;
+      }
+      
+      const heats = Object.entries(timeline)
+        .map(([id, h]) => ({ id, ...h }))
+        .sort((a, b) => a.number - b.number);
+      
+      list.innerHTML = heats.map(h => {
+        const catClass = h.category?.toLowerCase().replace(/[^a-z]/g, '').substring(0, 4) || '';
+        return `
+          <div class="heat-card ${catClass === 'expe' ? 'exp' : catClass}">
+            <div class="heat-header">
+              <strong>Heat ${h.number} - ${h.wodName}</strong>
+              <span class="heat-time">${h.startTime} · ${h.category}</span>
+            </div>
+            <div class="heat-lanes">
+              ${(h.lanes || []).map((tid, i) => {
+                const team = teams[tid];
+                return `<div class="lane">${team ? team.emoji + ' ' + team.name : 'Lane ' + (i+1)}</div>`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Initialize
+    loadCompetition();
+    
+    // Listen for judge connections
+    DB.listen(`competitions/${compId}/judges`, (judges) => {
+      const container = document.getElementById('judgeStatus');
+      const startBtn = document.getElementById('startBtn');
+      
+      if (!judges || Object.keys(judges).length === 0) {
+        container.innerHTML = '<div class="empty-state">Nessun giudice connesso</div>';
+        startBtn.disabled = true;
+        return;
+      }
+      
+      const judgeList = Object.entries(judges);
+      const allReady = judgeList.every(([id, j]) => j.status === 'ready' && j.teamId);
+      const anyReady = judgeList.some(([id, j]) => j.status === 'ready' && j.teamId);
+      
+      container.innerHTML = judgeList.map(([id, j]) => `
+        <div class="list-item">
+          <div class="emoji">${j.status === 'ready' ? '✅' : '⏳'}</div>
+          <div class="info">
+            <h4>${j.name || 'Giudice'}</h4>
+            <p>Lane ${j.lane || '?'} · ${j.teamId ? 'Team: ' + j.teamId : 'Nessun team'} · ${j.present ? 'Presente' : 'Non confermato'}</p>
+          </div>
+        </div>
+      `).join('');
+      
+      startBtn.disabled = !anyReady;
+    });
+    
+    window.startHeat = async () => {
+      // TODO: implement heat start
+      alert('Starting heat...');
+    };
+    
+    window.resetHeat = async () => {
+      await DB.remove(`competitions/${compId}/judges`);
+      alert('Giudici resettati');
+    };
+  </script>
+</body>
+</html>

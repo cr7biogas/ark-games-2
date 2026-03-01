@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>📋 Giudice - ARK Games 2.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      min-height: 100vh;
+    }
+    
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    .header p {
+      color: #888;
+      font-size: 14px;
+    }
+    
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+    .step {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .step.active {
+      background: #e94560;
+    }
+    .step.done {
+      background: #2ecc71;
+    }
+    
+    .card-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .select-card {
+      background: #1a1a2e;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .select-card:hover {
+      background: #252542;
+    }
+    .select-card.selected {
+      background: #e94560;
+    }
+    .select-card .emoji {
+      font-size: 36px;
+    }
+    .select-card .info h3 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    .select-card .info p {
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+    }
+    .select-card.selected .info p {
+      color: rgba(255,255,255,0.8);
+    }
+    
+    .btn {
+      padding: 18px;
+      border-radius: 14px;
+      border: none;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #333;
+      color: #fff;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Timer Screen */
+    .timer-screen {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+    }
+    .timer-display {
+      font-size: 100px;
+      font-weight: 800;
+      font-family: 'SF Mono', Monaco, monospace;
+      margin: 30px 0;
+    }
+    .timer-status {
+      font-size: 24px;
+      color: #888;
+      margin-bottom: 30px;
+    }
+    .timer-status.countdown {
+      color: #f1c40f;
+      font-size: 80px;
+    }
+    .timer-status.running {
+      color: #2ecc71;
+    }
+    
+    .team-badge {
+      background: #1a1a2e;
+      border-radius: 20px;
+      padding: 15px 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .team-badge .emoji {
+      font-size: 40px;
+    }
+    
+    .movements-list {
+      background: #1a1a2e;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: left;
+      margin: 20px 0;
+      max-width: 400px;
+    }
+    .movements-list h4 {
+      color: #888;
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .movement-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+    }
+    .movement-item:last-child {
+      border-bottom: none;
+    }
+    
+    /* Score Input */
+    .score-input-container {
+      background: #1a1a2e;
+      border-radius: 20px;
+      padding: 30px;
+      margin: 20px 0;
+    }
+    .score-input-container h3 {
+      margin-bottom: 20px;
+    }
+    .score-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .score-row label {
+      flex: 1;
+      text-align: left;
+    }
+    .score-row label span {
+      display: block;
+      color: #888;
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    .score-row input {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: 2px solid #333;
+      background: #0f0f1a;
+      color: #fff;
+      font-size: 24px;
+      text-align: center;
+    }
+    .score-row input:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+    
+    .waiting-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .waiting-overlay.hidden {
+      display: none;
+    }
+    .waiting-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #333;
+      border-top-color: #e94560;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .ready-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      padding: 20px;
+      border-radius: 16px;
+      border: none;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #2ecc71;
+      color: #fff;
+    }
+    .ready-btn.not-ready {
+      background: #e94560;
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SCREEN 1: Select WOD -->
+  <div class="screen active" id="screen-wod">
+    <div class="header">
+      <h1>📋 Giudice</h1>
+      <p>Seleziona il WOD da giudicare</p>
+    </div>
+    
+    <div class="step-indicator">
+      <div class="step active">1</div>
+      <div class="step">2</div>
+      <div class="step">3</div>
+    </div>
+    
+    <div class="card-list" id="wodList">
+      <div class="empty">Caricamento...</div>
+    </div>
+  </div>
+  
+  <!-- SCREEN 2: Select Team -->
+  <div class="screen" id="screen-team">
+    <div class="header">
+      <h1 id="selectedWodName">WOD</h1>
+      <p>Seleziona il team da giudicare</p>
+    </div>
+    
+    <div class="step-indicator">
+      <div class="step done">✓</div>
+      <div class="step active">2</div>
+      <div class="step">3</div>
+    </div>
+    
+    <div class="card-list" id="teamList">
+      <div class="empty">Caricamento...</div>
+    </div>
+    
+    <button class="btn btn-secondary" onclick="goToScreen('screen-wod')">← Indietro</button>
+  </div>
+  
+  <!-- SCREEN 3: Confirm & Ready -->
+  <div class="screen" id="screen-ready">
+    <div class="header">
+      <h1>✅ Conferma Presenza</h1>
+      <p>Il team è in posizione?</p>
+    </div>
+    
+    <div class="step-indicator">
+      <div class="step done">✓</div>
+      <div class="step done">✓</div>
+      <div class="step active">3</div>
+    </div>
+    
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div class="team-badge">
+        <span class="emoji" id="confirmEmoji">🐾</span>
+        <span id="confirmTeamName">Team</span>
+      </div>
+      
+      <div class="movements-list" id="movementsList">
+        <h4>Movimenti</h4>
+      </div>
+      
+      <button class="btn btn-primary" onclick="confirmPresence()" id="confirmBtn">
+        ✅ Team Presente - PRONTO
+      </button>
+      <button class="btn btn-secondary" onclick="goToScreen('screen-team')" style="margin-top:10px">
+        ← Cambia Team
+      </button>
+    </div>
+  </div>
+  
+  <!-- SCREEN 4: Waiting for Start -->
+  <div class="screen" id="screen-waiting">
+    <div class="waiting-overlay" id="waitingOverlay">
+      <div class="waiting-spinner"></div>
+      <h2>In attesa dello START...</h2>
+      <p style="color:#888;margin-top:10px" id="waitingStatus">0/0 giudici pronti</p>
+    </div>
+    
+    <button class="ready-btn" id="readyToggle" onclick="toggleReady()">
+      ✅ PRONTO
+    </button>
+  </div>
+  
+  <!-- SCREEN 5: Timer Running -->
+  <div class="screen timer-screen" id="screen-timer">
+    <div class="team-badge">
+      <span class="emoji" id="timerEmoji">🐾</span>
+      <span id="timerTeamName">Team</span>
+    </div>
+    
+    <div class="timer-status" id="timerStatus">In corso</div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    
+    <div class="movements-list" id="timerMovements">
+      <h4>Movimenti</h4>
+    </div>
+  </div>
+  
+  <!-- SCREEN 6: Score Input -->
+  <div class="screen" id="screen-score">
+    <div class="header">
+      <h1>📝 Inserisci Score</h1>
+    </div>
+    
+    <div class="team-badge">
+      <span class="emoji" id="scoreEmoji">🐾</span>
+      <span id="scoreTeamName">Team</span>
+    </div>
+    
+    <div class="score-input-container">
+      <div class="score-row" id="scoreFields">
+        <!-- Dynamic based on WOD type -->
+      </div>
+    </div>
+    
+    <button class="btn btn-primary" onclick="submitScore()">
+      ✅ Conferma Score
+    </button>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    const compId = localStorage.getItem('ark2_compId');
+    if (!compId) {
+      alert('Seleziona prima una gara!');
+      location.href = 'index.html';
+    }
+    
+    let judgeId = localStorage.getItem('ark2_judgeId');
+    if (!judgeId) {
+      judgeId = 'judge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      localStorage.setItem('ark2_judgeId', judgeId);
+    }
+    
+    let selectedWod = null;
+    let selectedTeam = null;
+    let allTeams = {};
+    let allScores = {};
+    let isReady = false;
+    let timerInterval = null;
+    
+    // Screen navigation
+    window.goToScreen = (screenId) => {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    };
+    
+    // Load WODs
+    async function loadWods() {
+      const wods = await DB.get(`competitions/${compId}/workouts`);
+      const list = document.getElementById('wodList');
+      
+      if (!wods || Object.keys(wods).length === 0) {
+        list.innerHTML = '<div class="empty">Nessun WOD disponibile</div>';
+        return;
+      }
+      
+      list.innerHTML = Object.entries(wods).map(([id, w]) => `
+        <div class="select-card" onclick="selectWod('${id}', '${w.name}')">
+          <div class="emoji">💪</div>
+          <div class="info">
+            <h3>${w.name}</h3>
+            <p>${w.type.toUpperCase()} · ${w.timeCapSec/60} min</p>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Select WOD
+    window.selectWod = async (wodId, wodName) => {
+      selectedWod = { id: wodId, ...(await DB.get(`competitions/${compId}/workouts/${wodId}`)) };
+      document.getElementById('selectedWodName').textContent = wodName;
+      goToScreen('screen-team');
+      loadTeams();
+    };
+    
+    // Load teams (only those without score for this WOD)
+    async function loadTeams() {
+      allTeams = await DB.get(`competitions/${compId}/teams`) || {};
+      allScores = await DB.get(`competitions/${compId}/scores`) || {};
+      
+      const list = document.getElementById('teamList');
+      
+      // Filter teams: only those in WOD categories and without score
+      const availableTeams = Object.entries(allTeams).filter(([id, t]) => {
+        // Check category
+        if (selectedWod.categories && !selectedWod.categories.includes(t.category)) {
+          return false;
+        }
+        // Check if already has score
+        const scoreKey = `${id}_${selectedWod.id}`;
+        if (allScores[scoreKey]) {
+          return false;
+        }
+        return true;
+      });
+      
+      if (availableTeams.length === 0) {
+        list.innerHTML = '<div class="empty">Tutti i team hanno già uno score per questo WOD</div>';
+        return;
+      }
+      
+      // Group by category
+      const grouped = {};
+      availableTeams.forEach(([id, t]) => {
+        if (!grouped[t.category]) grouped[t.category] = [];
+        grouped[t.category].push({ id, ...t });
+      });
+      
+      list.innerHTML = Object.entries(grouped).map(([cat, teams]) => `
+        <h4 style="padding:10px 0;color:#888">${cat}</h4>
+        ${teams.map(t => `
+          <div class="select-card" onclick="selectTeam('${t.id}')">
+            <div class="emoji">${t.emoji}</div>
+            <div class="info">
+              <h3>${t.name}</h3>
+            </div>
+          </div>
+        `).join('')}
+      `).join('');
+    }
+    
+    // Select team
+    window.selectTeam = (teamId) => {
+      selectedTeam = { id: teamId, ...allTeams[teamId] };
+      
+      document.getElementById('confirmEmoji').textContent = selectedTeam.emoji;
+      document.getElementById('confirmTeamName').textContent = selectedTeam.name;
+      
+      // Show movements
+      const movList = document.getElementById('movementsList');
+      movList.innerHTML = `
+        <h4>Movimenti - ${selectedWod.name}</h4>
+        ${(selectedWod.movements || []).map(m => `
+          <div class="movement-item">
+            <span>${m.name}</span>
+            <span style="color:#888">${m.reps}</span>
+          </div>
+        `).join('')}
+      `;
+      
+      goToScreen('screen-ready');
+    };
+    
+    // Confirm presence and mark ready
+    window.confirmPresence = async () => {
+      // Register as judge
+      await DB.set(`competitions/${compId}/judges/${judgeId}`, {
+        name: 'Giudice ' + judgeId.substr(-4),
+        wodId: selectedWod.id,
+        teamId: selectedTeam.id,
+        teamName: selectedTeam.name,
+        teamEmoji: selectedTeam.emoji,
+        present: true,
+        status: 'ready',
+        timestamp: Date.now()
+      });
+      
+      isReady = true;
+      goToScreen('screen-waiting');
+      listenForStart();
+    };
+    
+    // Toggle ready status
+    window.toggleReady = async () => {
+      isReady = !isReady;
+      const btn = document.getElementById('readyToggle');
+      
+      if (isReady) {
+        btn.textContent = '✅ PRONTO';
+        btn.classList.remove('not-ready');
+        await DB.update(`competitions/${compId}/judges/${judgeId}`, { status: 'ready' });
+      } else {
+        btn.textContent = '❌ NON PRONTO';
+        btn.classList.add('not-ready');
+        await DB.update(`competitions/${compId}/judges/${judgeId}`, { status: 'waiting' });
+      }
+    };
+    
+    // Listen for heat start
+    function listenForStart() {
+      // Listen for judge count
+      DB.listen(`competitions/${compId}/judges`, (judges) => {
+        if (!judges) return;
+        const total = Object.keys(judges).length;
+        const ready = Object.values(judges).filter(j => j.status === 'ready' && j.present).length;
+        document.getElementById('waitingStatus').textContent = `${ready}/${total} giudici pronti`;
+      });
+      
+      // Listen for heat status
+      DB.listen(`competitions/${compId}/currentHeat`, (heat) => {
+        if (heat && heat.status === 'countdown') {
+          startCountdown(heat.countdownFrom || 10);
+        } else if (heat && heat.status === 'running') {
+          startTimer(heat.timeCapSec, heat.startedAt);
+        } else if (heat && heat.status === 'done') {
+          showScoreInput();
+        }
+      });
+    }
+    
+    // Countdown before start
+    function startCountdown(seconds) {
+      document.getElementById('waitingOverlay').classList.add('hidden');
+      goToScreen('screen-timer');
+      
+      document.getElementById('timerEmoji').textContent = selectedTeam.emoji;
+      document.getElementById('timerTeamName').textContent = selectedTeam.name;
+      document.getElementById('timerStatus').className = 'timer-status countdown';
+      
+      let count = seconds;
+      document.getElementById('timerDisplay').textContent = count;
+      document.getElementById('timerStatus').textContent = 'PRONTI!';
+      
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          document.getElementById('timerDisplay').textContent = count;
+        } else {
+          clearInterval(interval);
+          document.getElementById('timerStatus').textContent = 'GO!';
+          document.getElementById('timerDisplay').textContent = 'GO!';
+        }
+      }, 1000);
+    }
+    
+    // Timer running
+    function startTimer(timeCapSec, startedAt) {
+      document.getElementById('timerStatus').className = 'timer-status running';
+      document.getElementById('timerStatus').textContent = 'In corso';
+      
+      // Show movements
+      document.getElementById('timerMovements').innerHTML = `
+        <h4>Movimenti</h4>
+        ${(selectedWod.movements || []).map(m => `
+          <div class="movement-item">
+            <span>${m.name}</span>
+            <span style="color:#888">${m.reps}</span>
+          </div>
+        `).join('')}
+      `;
+      
+      if (timerInterval) clearInterval(timerInterval);
+      
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        const remaining = timeCapSec - elapsed;
+        
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('timerDisplay').textContent = 'TIME!';
+          document.getElementById('timerStatus').textContent = 'Time Cap raggiunto';
+          setTimeout(showScoreInput, 2000);
+          return;
+        }
+        
+        const min = Math.floor(elapsed / 60);
+        const sec = elapsed % 60;
+        document.getElementById('timerDisplay').textContent = 
+          `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+      }, 100);
+    }
+    
+    // Show score input
+    function showScoreInput() {
+      document.getElementById('scoreEmoji').textContent = selectedTeam.emoji;
+      document.getElementById('scoreTeamName').textContent = selectedTeam.name;
+      
+      const fields = document.getElementById('scoreFields');
+      
+      if (selectedWod.type === 'fortime') {
+        fields.innerHTML = `
+          <label>
+            <span>Tempo (MM:SS)</span>
+            <input type="text" id="scoreTime" placeholder="05:30" pattern="[0-9]{2}:[0-9]{2}">
+          </label>
+          <label>
+            <span>oppure Reps</span>
+            <input type="number" id="scoreReps" placeholder="150">
+          </label>
+        `;
+      } else {
+        fields.innerHTML = `
+          <label>
+            <span>Reps / Rounds</span>
+            <input type="number" id="scoreReps" placeholder="150">
+          </label>
+        `;
+      }
+      
+      goToScreen('screen-score');
+    }
+    
+    // Submit score
+    window.submitScore = async () => {
+      const timeInput = document.getElementById('scoreTime');
+      const repsInput = document.getElementById('scoreReps');
+      
+      let time = null;
+      let reps = null;
+      
+      if (timeInput && timeInput.value) {
+        const [m, s] = timeInput.value.split(':').map(Number);
+        time = m * 60 + s;
+      }
+      if (repsInput && repsInput.value) {
+        reps = parseInt(repsInput.value);
+      }
+      
+      if (!time && !reps) {
+        alert('Inserisci un tempo o le reps!');
+        return;
+      }
+      
+      const scoreKey = `${selectedTeam.id}_${selectedWod.id}`;
+      await DB.set(`competitions/${compId}/scores/${scoreKey}`, {
+        teamId: selectedTeam.id,
+        wodId: selectedWod.id,
+        time,
+        reps,
+        judgeId,
+        timestamp: Date.now()
+      });
+      
+      // Clear judge status
+      await DB.remove(`competitions/${compId}/judges/${judgeId}`);
+      
+      alert('✅ Score salvato!');
+      
+      // Reset and go back to WOD selection
+      selectedWod = null;
+      selectedTeam = null;
+      goToScreen('screen-wod');
+      loadWods();
+    };
+    
+    // Init
+    loadWods();
+  </script>
+</body>
+</html>
