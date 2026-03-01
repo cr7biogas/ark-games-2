@@ -418,9 +418,13 @@
     const seasonId = params.get('id');
     
     if (!seasonId) {
-      alert('Season non trovata');
+      alert('ID Season mancante nell\'URL');
       location.href = './';
     }
+    
+    // Show loading state
+    document.getElementById('seasonName').textContent = 'Caricamento...';
+    document.getElementById('seasonDates').textContent = '';
     
     let season = {};
     let wods = [];
@@ -438,7 +442,15 @@
     
     // Load season data
     async function loadSeason() {
-      season = await DB.get(`seasons/${seasonId}`) || {};
+      season = await DB.get(`seasons/${seasonId}`);
+      
+      // Error if season doesn't exist
+      if (!season) {
+        alert('❌ Season non trovata!\n\nVerifica che l\'ID sia corretto.');
+        location.href = './';
+        return;
+      }
+      
       wods = Object.entries(await DB.get(`seasons/${seasonId}/workouts`) || {}).map(([id, w]) => ({...w, id}));
       schedule = await DB.get(`seasons/${seasonId}/schedule`) || {};
       
@@ -708,6 +720,10 @@
       }
       if (!email) {
         alert('Inserisci l\'email del capitano');
+        return;
+      }
+      if (!email.includes('@') || !email.includes('.')) {
+        alert('Inserisci un\'email valida');
         return;
       }
       
