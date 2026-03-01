@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🎬 Regia - ARK Games 2.0</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a24;
+      --bg-hover: #252532;
+      --accent: #e94560;
+      --accent-glow: rgba(233,69,96,0.3);
+      --success: #00d26a;
+      --warning: #ffc107;
+      --text-primary: #ffffff;
+      --text-secondary: #8888aa;
+      --border: #2a2a3a;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header .logo {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header .logo span { font-size: 24px; }
+    .header .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .header .status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .header .actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+    }
+    
+    /* Main Layout */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      height: calc(100vh - 56px);
+    }
+    
+    /* Preview Area */
+    .preview-area {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .main-preview {
+      flex: 1;
+      background: #000;
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .main-preview video, .main-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .main-preview .placeholder {
+      color: var(--text-secondary);
+      text-align: center;
+    }
+    .main-preview .placeholder .icon { font-size: 60px; margin-bottom: 15px; }
+    
+    /* Overlay on preview */
+    .preview-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .preview-overlay .timer {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.8);
+      padding: 15px 25px;
+      border-radius: var(--radius-sm);
+      font-size: 48px;
+      font-weight: 800;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+    .preview-overlay .score-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.9));
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+    }
+    .preview-overlay .team-score {
+      text-align: center;
+    }
+    .preview-overlay .team-score .emoji { font-size: 32px; }
+    .preview-overlay .team-score .name { font-size: 14px; color: #888; }
+    .preview-overlay .team-score .score { font-size: 24px; font-weight: 700; }
+    
+    /* Camera Grid */
+    .camera-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .camera-thumb {
+      aspect-ratio: 16/9;
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .camera-thumb:hover {
+      border-color: var(--accent);
+      transform: scale(1.02);
+    }
+    .camera-thumb.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .camera-thumb video, .camera-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-thumb .label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.9));
+      padding: 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .camera-thumb .status-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .camera-thumb .no-signal {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      font-size: 24px;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .sidebar-section {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-section h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Camera List */
+    .camera-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+    .camera-item {
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .camera-item:hover {
+      background: var(--bg-hover);
+    }
+    .camera-item .preview {
+      width: 60px;
+      height: 40px;
+      background: #000;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .camera-item .preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-item .info {
+      flex: 1;
+    }
+    .camera-item .info .name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .camera-item .info .ip {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .camera-item .assign {
+      padding: 6px 12px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    /* Controls */
+    .controls {
+      padding: 15px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+    }
+    .control-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .control-row:last-child { margin-bottom: 0; }
+    
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+    }
+    .btn-secondary {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    .btn-icon {
+      width: 44px;
+      flex: none;
+      font-size: 18px;
+    }
+    
+    /* Scan Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-content {
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h2 {
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .modal-body {
+      padding: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .scan-progress {
+      text-align: center;
+      padding: 40px;
+    }
+    .scan-progress .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .found-camera {
+      background: var(--bg-card);
+      border-radius: var(--radius-sm);
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .found-camera .icon {
+      font-size: 32px;
+    }
+    .found-camera .info {
+      flex: 1;
+    }
+    .found-camera .info .name {
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .found-camera .info .details {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .found-camera .add-btn {
+      padding: 8px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    
+    /* Layout Selector */
+    .layout-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .layout-option {
+      aspect-ratio: 16/9;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      padding: 10px;
+      transition: all 0.2s;
+    }
+    .layout-option:hover {
+      border-color: var(--text-secondary);
+    }
+    .layout-option.active {
+      border-color: var(--accent);
+    }
+    .layout-option .grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      gap: 3px;
+    }
+    .layout-option .grid div {
+      background: var(--text-secondary);
+      border-radius: 2px;
+    }
+    /* Single */
+    .layout-single .grid { grid-template-columns: 1fr; }
+    /* 2x2 */
+    .layout-2x2 .grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    /* Side by side */
+    .layout-side .grid { grid-template-columns: 2fr 1fr; }
+    .layout-side .grid div:nth-child(2) { grid-row: span 2; }
+    
+    /* Input field */
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .input-group input {
+      flex: 1;
+      padding: 12px 15px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <span>🎬</span>
+      Regia
+    </div>
+    <div class="status">
+      <div class="dot"></div>
+      <span id="statusText">Pronto</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="openScanModal()">📡 Cerca Camere</button>
+      <button class="btn btn-primary" onclick="toggleStream()">🔴 Vai LIVE</button>
+    </div>
+  </div>
+  
+  <div class="main">
+    <div class="preview-area">
+      <div class="main-preview" id="mainPreview">
+        <div class="placeholder">
+          <div class="icon">📹</div>
+          <p>Seleziona una camera o layout</p>
+        </div>
+        
+        <div class="preview-overlay" id="overlay" style="display:none">
+          <div class="timer" id="overlayTimer">00:00</div>
+          <div class="score-bar" id="overlayScores"></div>
+        </div>
+      </div>
+      
+      <div class="camera-grid" id="cameraGrid">
+        <div class="camera-thumb" onclick="selectCamera(0)">
+          <div class="no-signal">📷</div>
+          <div class="label">Lane 1</div>
+        </div>
+        <div class="camera-thumb" onclick="selectCamera(1)">
+          <div class="no-signal">📷</div>
+          <div class="label">Lane 2</div>
+        </div>
+        <div class="camera-thumb" onclick="selectCamera(2)">
+          <div class="no-signal">📷</div>
+          <div class="label">Lane 3</div>
+        </div>
+        <div class="camera-thumb" onclick="selectCamera(3)">
+          <div class="no-signal">📷</div>
+          <div class="label">Overview</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <h3>🎛️ Layout</h3>
+        <div class="layout-options">
+          <div class="layout-option layout-single active" onclick="setLayout('single')">
+            <div class="grid"><div></div></div>
+          </div>
+          <div class="layout-option layout-2x2" onclick="setLayout('2x2')">
+            <div class="grid"><div></div><div></div><div></div><div></div></div>
+          </div>
+          <div class="layout-option layout-side" onclick="setLayout('side')">
+            <div class="grid"><div></div><div></div><div></div></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>➕ Aggiungi Camera</h3>
+        <div class="input-group">
+          <input type="text" id="cameraIp" placeholder="192.168.1.X:4747">
+          <button class="btn btn-primary btn-icon" onclick="addCameraManual()">+</button>
+        </div>
+      </div>
+      
+      <div class="camera-list" id="cameraList">
+        <p style="color:var(--text-secondary);font-size:13px;text-align:center;padding:20px">
+          Nessuna camera connessa.<br>
+          Clicca "Cerca Camere" per iniziare.
+        </p>
+      </div>
+      
+      <div class="controls">
+        <div class="control-row">
+          <button class="btn btn-secondary" onclick="toggleOverlay()">👁️ Overlay</button>
+          <button class="btn btn-secondary" onclick="toggleAutoSwitch()">🔄 Auto</button>
+        </div>
+        <div class="control-row">
+          <button class="btn btn-success" onclick="startRecording()">⏺️ REC</button>
+          <button class="btn btn-secondary btn-icon" onclick="takeScreenshot()">📸</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scan Modal -->
+  <div class="modal" id="scanModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📡 Cerca Camere sulla Rete</h2>
+        <button class="modal-close" onclick="closeScanModal()">×</button>
+      </div>
+      <div class="modal-body" id="scanResults">
+        <div class="scan-progress">
+          <div class="spinner"></div>
+          <p>Scansione rete in corso...</p>
+          <p style="color:var(--text-secondary);font-size:13px;margin-top:10px" id="scanStatus">
+            Cercando dispositivi...
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    const compId = localStorage.getItem('ark2_compId');
+    
+    // Camera management
+    let cameras = [];
+    let activeCamera = null;
+    let currentLayout = 'single';
+    let overlayVisible = false;
+    let autoSwitch = false;
+    let autoSwitchInterval = null;
+    
+    // Common IP Webcam / DroidCam ports
+    const CAMERA_PORTS = [4747, 8080, 8081, 8082];
+    
+    // Scan network for cameras
+    window.openScanModal = () => {
+      document.getElementById('scanModal').classList.add('active');
+      startNetworkScan();
+    };
+    
+    window.closeScanModal = () => {
+      document.getElementById('scanModal').classList.remove('active');
+    };
+    
+    async function startNetworkScan() {
+      const results = document.getElementById('scanResults');
+      const status = document.getElementById('scanStatus');
+      
+      // Get local IP range (assume 192.168.1.x for now)
+      // In production, would need to detect actual network
+      const baseIp = '192.168.1';
+      const foundCameras = [];
+      
+      results.innerHTML = `
+        <div class="scan-progress">
+          <div class="spinner"></div>
+          <p>Scansione rete in corso...</p>
+          <p style="color:var(--text-secondary);font-size:13px;margin-top:10px" id="scanStatus">
+            Cercando su ${baseIp}.0/24...
+          </p>
+        </div>
+      `;
+      
+      // Scan common IPs (1-50 for speed)
+      for (let i = 1; i <= 50; i++) {
+        const ip = `${baseIp}.${i}`;
+        status.textContent = `Controllando ${ip}...`;
+        
+        for (const port of CAMERA_PORTS) {
+          try {
+            // Try to fetch video feed or status page
+            const url = `http://${ip}:${port}`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 500);
+            
+            // For DroidCam / IP Webcam, try to get snapshot
+            const response = await fetch(`${url}/shot.jpg`, { 
+              signal: controller.signal,
+              mode: 'no-cors' // Will fail but indicates server exists
+            }).catch(() => null);
+            
+            clearTimeout(timeout);
+            
+            if (response) {
+              foundCameras.push({
+                ip: ip,
+                port: port,
+                url: url,
+                type: port === 4747 ? 'DroidCam' : 'IP Webcam'
+              });
+            }
+          } catch (e) {
+            // Camera not found at this IP/port
+          }
+        }
+      }
+      
+      // Show results
+      if (foundCameras.length === 0) {
+        results.innerHTML = `
+          <div style="text-align:center;padding:30px;color:var(--text-secondary)">
+            <div style="font-size:48px;margin-bottom:15px">😕</div>
+            <p>Nessuna camera trovata.</p>
+            <p style="font-size:13px;margin-top:10px">
+              Assicurati che:<br>
+              • DroidCam/IP Webcam sia attivo sul telefono<br>
+              • Il telefono sia sulla stessa WiFi<br>
+              • Il server sia avviato nell'app
+            </p>
+          </div>
+        `;
+      } else {
+        results.innerHTML = foundCameras.map((cam, i) => `
+          <div class="found-camera">
+            <div class="icon">📱</div>
+            <div class="info">
+              <div class="name">${cam.type}</div>
+              <div class="details">${cam.ip}:${cam.port}</div>
+            </div>
+            <button class="add-btn" onclick="addCamera('${cam.url}', '${cam.type}')">
+              + Aggiungi
+            </button>
+          </div>
+        `).join('');
+      }
+    }
+    
+    window.addCamera = (url, type) => {
+      const camera = {
+        id: 'cam_' + Date.now(),
+        url: url,
+        type: type,
+        name: type + ' ' + (cameras.length + 1),
+        slot: null
+      };
+      
+      cameras.push(camera);
+      renderCameraList();
+      closeScanModal();
+    };
+    
+    window.addCameraManual = () => {
+      const input = document.getElementById('cameraIp');
+      const ip = input.value.trim();
+      
+      if (!ip) return;
+      
+      const url = ip.includes('://') ? ip : `http://${ip}`;
+      addCamera(url, 'Camera');
+      input.value = '';
+    };
+    
+    function renderCameraList() {
+      const list = document.getElementById('cameraList');
+      
+      if (cameras.length === 0) {
+        list.innerHTML = `
+          <p style="color:var(--text-secondary);font-size:13px;text-align:center;padding:20px">
+            Nessuna camera connessa.<br>
+            Clicca "Cerca Camere" per iniziare.
+          </p>
+        `;
+        return;
+      }
+      
+      list.innerHTML = cameras.map((cam, i) => `
+        <div class="camera-item" onclick="previewCamera(${i})">
+          <div class="preview">
+            <img src="${cam.url}/shot.jpg" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📷</text></svg>'">
+          </div>
+          <div class="info">
+            <div class="name">${cam.name}</div>
+            <div class="ip">${cam.url}</div>
+          </div>
+          <select class="assign" onchange="assignCamera(${i}, this.value)" onclick="event.stopPropagation()">
+            <option value="">Assegna...</option>
+            <option value="0">Lane 1</option>
+            <option value="1">Lane 2</option>
+            <option value="2">Lane 3</option>
+            <option value="3">Overview</option>
+          </select>
+        </div>
+      `).join('');
+    }
+    
+    window.assignCamera = (camIndex, slot) => {
+      const cam = cameras[camIndex];
+      if (!cam) return;
+      
+      // Remove from previous slot
+      cameras.forEach(c => {
+        if (c.slot === parseInt(slot)) c.slot = null;
+      });
+      
+      cam.slot = slot !== '' ? parseInt(slot) : null;
+      updateCameraGrid();
+    };
+    
+    function updateCameraGrid() {
+      const slots = ['Lane 1', 'Lane 2', 'Lane 3', 'Overview'];
+      const grid = document.getElementById('cameraGrid');
+      
+      grid.innerHTML = slots.map((label, i) => {
+        const cam = cameras.find(c => c.slot === i);
+        
+        if (cam) {
+          return `
+            <div class="camera-thumb ${activeCamera === i ? 'active' : ''}" onclick="selectCamera(${i})">
+              <img src="${cam.url}/video" onerror="this.outerHTML='<div class=no-signal>⚠️</div>'">
+              <div class="status-dot"></div>
+              <div class="label">${label}</div>
+            </div>
+          `;
+        }
+        
+        return `
+          <div class="camera-thumb" onclick="selectCamera(${i})">
+            <div class="no-signal">📷</div>
+            <div class="label">${label}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    window.selectCamera = (index) => {
+      activeCamera = index;
+      document.querySelectorAll('.camera-thumb').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+      
+      const cam = cameras.find(c => c.slot === index);
+      const preview = document.getElementById('mainPreview');
+      
+      if (cam) {
+        preview.innerHTML = `
+          <img src="${cam.url}/video" style="width:100%;height:100%;object-fit:contain">
+          <div class="preview-overlay" id="overlay" ${overlayVisible ? '' : 'style="display:none"'}>
+            <div class="timer" id="overlayTimer">00:00</div>
+            <div class="score-bar" id="overlayScores"></div>
+          </div>
+        `;
+      } else {
+        preview.innerHTML = `
+          <div class="placeholder">
+            <div class="icon">📷</div>
+            <p>Nessuna camera assegnata a questo slot</p>
+          </div>
+        `;
+      }
+    };
+    
+    window.setLayout = (layout) => {
+      currentLayout = layout;
+      document.querySelectorAll('.layout-option').forEach(el => {
+        el.classList.toggle('active', el.classList.contains('layout-' + layout));
+      });
+      // TODO: Update main preview layout
+    };
+    
+    window.toggleOverlay = () => {
+      overlayVisible = !overlayVisible;
+      const overlay = document.getElementById('overlay');
+      if (overlay) {
+        overlay.style.display = overlayVisible ? 'block' : 'none';
+      }
+    };
+    
+    window.toggleAutoSwitch = () => {
+      autoSwitch = !autoSwitch;
+      
+      if (autoSwitch) {
+        autoSwitchInterval = setInterval(() => {
+          const slots = cameras.filter(c => c.slot !== null).map(c => c.slot);
+          if (slots.length > 0) {
+            const currentIdx = slots.indexOf(activeCamera);
+            const nextIdx = (currentIdx + 1) % slots.length;
+            selectCamera(slots[nextIdx]);
+          }
+        }, 10000);
+      } else {
+        clearInterval(autoSwitchInterval);
+      }
+    };
+    
+    window.toggleStream = () => {
+      alert('Per lo streaming live, usa OBS con Browser Source:\n\n' + location.href);
+    };
+    
+    window.startRecording = () => {
+      alert('Recording non ancora implementato.\nUsa OBS per registrare.');
+    };
+    
+    window.takeScreenshot = () => {
+      // TODO: Capture canvas and download
+      alert('Screenshot salvato!');
+    };
+    
+    // Listen for timer/scores from Firebase
+    if (compId) {
+      DB.listen(`competitions/${compId}/currentHeat`, (heat) => {
+        if (!heat) return;
+        
+        // Update overlay timer
+        const timerEl = document.getElementById('overlayTimer');
+        if (timerEl && heat.startedAt) {
+          const updateTimer = () => {
+            const elapsed = Math.floor((Date.now() - heat.startedAt) / 1000);
+            const min = Math.floor(elapsed / 60);
+            const sec = elapsed % 60;
+            timerEl.textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+          };
+          updateTimer();
+          setInterval(updateTimer, 1000);
+        }
+      });
+    }
+    
+    // Initial render
+    updateCameraGrid();
+  </script>
+</body>
+</html>
