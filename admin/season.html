@@ -489,6 +489,22 @@ Beginner</textarea>
             </a>
           </div>
           
+          <p style="color:#888;font-size:0.85rem;margin-bottom:10px;">📺 Video & Streaming:</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+            <a id="cameraLink" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;" target="_blank">
+              📷 Cameras
+            </a>
+            <a id="streamLink" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;" target="_blank">
+              📺 Stream Viewer
+            </a>
+            <a id="outputLink" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;" target="_blank">
+              🖥️ Output OBS
+            </a>
+            <a id="tvLink" class="btn btn-secondary" style="text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;" target="_blank">
+              📺 TV Display
+            </a>
+          </div>
+          
           <button class="btn" onclick="closeLiveEvent()" style="width:100%;background:#c0392b;color:white;">
             ❌ CHIUDI EVENTO
           </button>
@@ -1297,6 +1313,10 @@ Beginner</textarea>
       // Set links
       document.getElementById('judgeLink').href = `../judge.html?s=${seasonId}&date=${event.date}`;
       document.getElementById('regiaLink').href = `../regia.html?s=${seasonId}`;
+      document.getElementById('cameraLink').href = `../camera-webrtc.html?c=${seasonId}`;
+      document.getElementById('streamLink').href = `../stream-webrtc.html?c=${seasonId}`;
+      document.getElementById('outputLink').href = `../live/output.html?c=${seasonId}`;
+      document.getElementById('tvLink').href = `../live/tv.html?c=${seasonId}`;
       document.getElementById('leaderboardSeasonLink').href = `../live/leaderboard.html?s=${seasonId}`;
     }
     
