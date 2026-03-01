@@ -46,6 +46,75 @@
     .btn:hover { background: #444; }
     .btn-danger { background: #e74c3c; }
     .btn-danger:hover { background: #c0392b; }
+    .btn-success { background: #2ecc71; }
+    .btn-success:hover { background: #27ae60; }
+    
+    /* Fullscreen output mode */
+    .fullscreen-output {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+    }
+    .fullscreen-output.active { display: block; }
+    .fullscreen-output video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .fs-overlay-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 30px 40px;
+      background: linear-gradient(rgba(0,0,0,0.8), transparent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .fs-logo {
+      font-size: 32px;
+      font-weight: 800;
+    }
+    .fs-live {
+      background: #e94560;
+      padding: 10px 25px;
+      border-radius: 25px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .fs-overlay-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 30px 40px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    }
+    .fs-timer {
+      font-size: 72px;
+      font-weight: 800;
+      font-family: 'SF Mono', Monaco, monospace;
+      color: #2ecc71;
+    }
+    .fs-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .fullscreen-output:hover .fs-close { opacity: 1; }
     
     /* Main grid - 2 rows */
     .main-grid {
@@ -178,11 +247,25 @@
 <body>
   <h1>🎬 Regia WebRTC</h1>
   
+  <!-- Fullscreen output mode -->
+  <div class="fullscreen-output" id="fullscreenOutput">
+    <video id="fsVideo" autoplay playsinline muted></video>
+    <div class="fs-overlay-top">
+      <div class="fs-logo">🏋️ ARK Games</div>
+      <div class="fs-live">🔴 LIVE</div>
+    </div>
+    <div class="fs-overlay-bottom">
+      <div class="fs-timer" id="fsTimer">00:00</div>
+    </div>
+    <button class="fs-close" onclick="exitFullscreen()">✕</button>
+  </div>
+  
   <div class="status-bar">
     <div class="dot"></div>
     <span class="count"><span id="camCount">0</span> camere online</span>
     <div class="actions">
       <button class="btn" onclick="refreshAll()">🔄 Riconnetti Tutte</button>
+      <button class="btn btn-success" onclick="goFullscreen()">📺 Output</button>
       <button class="btn btn-danger" onclick="cleanupAll()">🗑️ Pulisci</button>
     </div>
   </div>
@@ -504,6 +587,50 @@
     };
     
     log('Regia avviata', 'success');
+    
+    // Fullscreen output mode
+    let fsSlot = null;
+    
+    window.goFullscreen = () => {
+      // Find first slot with video
+      for (let i = 0; i < 4; i++) {
+        if (slots[i]) {
+          const cam = cameras.get(slots[i]);
+          if (cam?.stream) {
+            fsSlot = i;
+            document.getElementById('fsVideo').srcObject = cam.stream;
+            document.getElementById('fullscreenOutput').classList.add('active');
+            document.documentElement.requestFullscreen?.();
+            return;
+          }
+        }
+      }
+      alert('Nessun video disponibile');
+    };
+    
+    window.exitFullscreen = () => {
+      document.getElementById('fullscreenOutput').classList.remove('active');
+      document.exitFullscreen?.();
+    };
+    
+    // ESC to exit
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') exitFullscreen();
+    });
+    
+    // Double-click slot to fullscreen
+    document.querySelectorAll('.slot-video').forEach((el, idx) => {
+      el.addEventListener('dblclick', () => {
+        if (slots[idx]) {
+          const cam = cameras.get(slots[idx]);
+          if (cam?.stream) {
+            fsSlot = idx;
+            document.getElementById('fsVideo').srcObject = cam.stream;
+            document.getElementById('fullscreenOutput').classList.add('active');
+          }
+        }
+      });
+    });
   </script>
 </body>
 </html>

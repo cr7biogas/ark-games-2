@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🎬 OBS Output - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, sans-serif;
+      background: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .output {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+    
+    .no-video {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      font-size: 100px;
+    }
+    
+    /* Top overlay */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 25px 40px;
+      background: linear-gradient(rgba(0,0,0,0.9), transparent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .logo-icon { font-size: 50px; }
+    .logo-text {
+      font-size: 36px;
+      font-weight: 800;
+    }
+    
+    .live-badge {
+      background: #e94560;
+      padding: 10px 25px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: pulse 2s infinite;
+    }
+    .live-dot {
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border-radius: 50%;
+    }
+    @keyframes pulse { 50% { opacity: 0.7; } }
+    
+    /* Bottom overlay */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 30px 40px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.9));
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    
+    .timer-box {
+      background: rgba(0,0,0,0.6);
+      padding: 20px 40px;
+      border-radius: 15px;
+      border-left: 6px solid #e94560;
+    }
+    .timer-label {
+      font-size: 14px;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .timer {
+      font-size: 80px;
+      font-weight: 800;
+      font-family: 'SF Mono', Monaco, monospace;
+      line-height: 1;
+    }
+    .timer.countdown { color: #f1c40f; }
+    .timer.running { color: #2ecc71; }
+    
+    .wod-box {
+      background: rgba(0,0,0,0.6);
+      padding: 20px 30px;
+      border-radius: 15px;
+      text-align: right;
+      max-width: 350px;
+    }
+    .wod-heat {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+    .wod-name {
+      font-size: 28px;
+      font-weight: 700;
+      color: #e94560;
+      margin-bottom: 8px;
+    }
+    .wod-desc {
+      font-size: 16px;
+      color: #ccc;
+      line-height: 1.4;
+    }
+    
+    /* Camera selector (hidden by default, show with ?controls) */
+    .controls {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .controls.visible { display: flex; }
+    .cam-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      border: 2px solid #444;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .cam-btn:hover { border-color: #888; }
+    .cam-btn.active { border-color: #e94560; background: #2a1020; }
+  </style>
+</head>
+<body>
+  <div class="output">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="no-video" id="noVideo">📹</div>
+    
+    <div class="top-bar">
+      <div class="logo">
+        <span class="logo-icon">🏋️</span>
+        <span class="logo-text">ARK Games</span>
+      </div>
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+    </div>
+    
+    <div class="bottom-bar">
+      <div class="timer-box">
+        <div class="timer-label">Tempo</div>
+        <div class="timer running" id="timer">00:00</div>
+      </div>
+      <div class="wod-box" id="wodBox">
+        <div class="wod-heat" id="heatInfo">Heat 1 • Beginner</div>
+        <div class="wod-name" id="wodName">WOD 1</div>
+        <div class="wod-desc" id="wodDesc">21-15-9 Thrusters & Pull-ups</div>
+      </div>
+    </div>
+    
+    <div class="controls" id="controls">
+      <button class="cam-btn" data-slot="0">1</button>
+      <button class="cam-btn" data-slot="1">2</button>
+      <button class="cam-btn" data-slot="2">3</button>
+      <button class="cam-btn" data-slot="3">4</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+    
+    // Show controls if ?controls in URL
+    if (location.search.includes('controls')) {
+      document.getElementById('controls').classList.add('visible');
+    }
+    
+    const cameras = new Map();
+    let currentCamId = null;
+    
+    // Listen for streams
+    DB.listen('streams', (data) => {
+      if (!data) return;
+      
+      for (const [id, info] of Object.entries(data)) {
+        if (!cameras.has(id)) {
+          cameras.set(id, { info, pc: null, stream: null, unsubscribers: [], addedCandidates: new Set() });
+        } else {
+          cameras.get(id).info = info;
+        }
+      }
+      
+      // Auto-select first streaming camera if none selected
+      if (!currentCamId) {
+        for (const [id, cam] of cameras.entries()) {
+          if (cam.info.status === 'streaming') {
+            selectCamera(id);
+            break;
+          }
+        }
+      }
+    });
+    
+    async function selectCamera(camId) {
+      if (currentCamId === camId) return;
+      
+      const cam = cameras.get(camId);
+      if (!cam) return;
+      
+      currentCamId = camId;
+      
+      // Disconnect old
+      for (const [id, c] of cameras.entries()) {
+        if (id !== camId && c.pc) {
+          c.unsubscribers.forEach(fn => fn?.());
+          c.pc.close();
+          c.pc = null;
+          c.stream = null;
+        }
+      }
+      
+      // Connect new
+      await connect(camId);
+      
+      // Update buttons
+      document.querySelectorAll('.cam-btn').forEach((btn, i) => {
+        const cams = Array.from(cameras.keys());
+        btn.classList.toggle('active', cams[i] === camId);
+      });
+    }
+    
+    async function connect(camId) {
+      const cam = cameras.get(camId);
+      if (!cam) return;
+      
+      cam.addedCandidates = new Set();
+      
+      // Clear old signaling for this viewer
+      const viewerId = 'obs';
+      try {
+        await DB.remove(`streams/${camId}/${viewerId}Offer`);
+        await DB.remove(`streams/${camId}/${viewerId}Candidates`);
+      } catch(e) {}
+      
+      await new Promise(r => setTimeout(r, 100));
+      
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      cam.pc = pc;
+      
+      const video = document.getElementById('video');
+      const noVideo = document.getElementById('noVideo');
+      
+      pc.ontrack = (e) => {
+        cam.stream = e.streams[0];
+        video.srcObject = e.streams[0];
+        noVideo.style.display = 'none';
+      };
+      
+      pc.onicecandidate = async (e) => {
+        if (e.candidate && !e.candidate.candidate.includes('.local')) {
+          const id = `obs_${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
+          await DB.set(`streams/${camId}/${viewerId}Candidates/${id}`, e.candidate.toJSON());
+        }
+      };
+      
+      // Create offer
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      
+      await DB.set(`streams/${camId}/${viewerId}Offer`, { type: offer.type, sdp: offer.sdp });
+      
+      // Listen for answer
+      let candidatesStarted = false;
+      const unsubAnswer = DB.listen(`streams/${camId}/${viewerId}Answer`, async (answer) => {
+        if (!answer || !pc || pc.signalingState === 'stable') return;
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        
+        if (!candidatesStarted) {
+          candidatesStarted = true;
+          const unsubCands = DB.listen(`streams/${camId}/${viewerId}CameraCandidates`, async (cands) => {
+            if (!cands || !pc) return;
+            for (const [id, cand] of Object.entries(cands)) {
+              if (cam.addedCandidates.has(id)) continue;
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(cand));
+                cam.addedCandidates.add(id);
+              } catch(e) {}
+            }
+          });
+          cam.unsubscribers.push(unsubCands);
+        }
+      });
+      cam.unsubscribers.push(unsubAnswer);
+    }
+    
+    // Camera buttons
+    document.querySelectorAll('.cam-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cams = Array.from(cameras.keys());
+        const camId = cams[parseInt(btn.dataset.slot)];
+        if (camId) selectCamera(camId);
+      });
+    });
+    
+    // Timer from Firebase
+    let timerInterval = null;
+    let startTime = null;
+    
+    DB.listen('timer', (data) => {
+      if (!data) return;
+      
+      const timerEl = document.getElementById('timer');
+      
+      if (data.status === 'countdown') {
+        timerEl.className = 'timer countdown';
+        timerEl.textContent = data.value || '10';
+        clearInterval(timerInterval);
+      } else if (data.status === 'running') {
+        timerEl.className = 'timer running';
+        startTime = data.startTime;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(updateTimer, 100);
+      } else {
+        timerEl.className = 'timer';
+        clearInterval(timerInterval);
+      }
+    });
+    
+    function updateTimer() {
+      if (!startTime) return;
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+      const secs = (elapsed % 60).toString().padStart(2, '0');
+      document.getElementById('timer').textContent = `${mins}:${secs}`;
+    }
+    
+    // Heat/WOD info from Firebase
+    DB.listen('currentHeat', (heat) => {
+      if (!heat) return;
+      
+      document.getElementById('heatInfo').textContent = 
+        `Heat ${heat.number || '?'} • ${heat.category || ''}`;
+      document.getElementById('wodName').textContent = heat.wodName || 'WOD';
+      document.getElementById('wodDesc').textContent = heat.wodDesc || '';
+    });
+  </script>
+</body>
+</html>
