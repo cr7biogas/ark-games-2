@@ -691,7 +691,12 @@ Scaled</textarea>
     
     window.saveDraft = async () => {
       const data = getFormData();
+      const session = JSON.parse(localStorage.getItem('ark_admin_session') || '{}');
       data.status = 'draft';
+      data.adminId = session.id;
+      data.adminEmail = session.email;
+      if (!competition.createdAt) data.createdAt = Date.now();
+      data.updatedAt = Date.now();
       
       if (!compId) {
         compId = 'comp_' + Date.now();
@@ -711,6 +716,7 @@ Scaled</textarea>
     
     window.saveAndPublish = async () => {
       const data = getFormData();
+      const session = JSON.parse(localStorage.getItem('ark_admin_session') || '{}');
       
       if (!data.name) {
         alert('Inserisci il nome della gara');
@@ -722,6 +728,10 @@ Scaled</textarea>
       }
       
       data.status = 'upcoming';
+      data.adminId = session.id;
+      data.adminEmail = session.email;
+      if (!competition.createdAt) data.createdAt = Date.now();
+      data.updatedAt = Date.now();
       
       if (!compId) {
         compId = 'comp_' + Date.now();

@@ -395,13 +395,16 @@
     }
     
     async function loadGare() {
-      const competitions = await DB.get('competitions') || {};
+      const session = JSON.parse(localStorage.getItem('ark_admin_session') || '{}');
+      const allCompetitions = await DB.get('competitions') || {};
       const list = document.getElementById('garaList');
       
-      const comps = Object.entries(competitions);
+      // FILTER: show only this admin's competitions
+      const comps = Object.entries(allCompetitions)
+        .filter(([id, c]) => c.adminId === session.id);
       
-      // Check for LIVE competition
-      const liveComp = comps.find(([id, c]) => c.status === 'live');
+      // Check for LIVE competition (only this admin's)
+      const liveComp = comps.find(([id, c]) => c.status === 'live' && c.adminId === session.id);
       const liveSection = document.getElementById('liveGaraSection');
       
       if (liveComp) {
