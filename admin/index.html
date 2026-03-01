@@ -329,6 +329,15 @@
           <div style="color:#888;text-align:center;padding:30px;">Caricamento...</div>
         </div>
       </div>
+      
+      <div class="section">
+        <div class="section-header">
+          <h2>🏆 Le Tue Seasons</h2>
+        </div>
+        <div class="gara-list" id="seasonList">
+          <div style="color:#888;text-align:center;padding:30px;">Caricamento...</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -468,6 +477,54 @@
                 <span>📅 ${c.date || 'TBD'}</span>
                 <span>👥 ${c.athleteCount || 0}</span>
                 <span>💰 €${(c.athleteCount || 0) * (c.price || 0)}</span>
+              </div>
+            </div>
+            <span class="status ${statusClass}">${statusText}</span>
+          </div>
+        `;
+      }).join('');
+      
+      // Also load seasons
+      loadSeasons();
+    }
+    
+    async function loadSeasons() {
+      const session = JSON.parse(localStorage.getItem('ark_admin_session') || '{}');
+      const allSeasons = await DB.get('seasons') || {};
+      const list = document.getElementById('seasonList');
+      
+      // FILTER: show only this admin's seasons
+      const seasons = Object.entries(allSeasons)
+        .filter(([id, s]) => s.adminId === session.id);
+      
+      if (seasons.length === 0) {
+        list.innerHTML = `
+          <div style="text-align:center;padding:40px;color:#666;">
+            <div style="font-size:3rem;margin-bottom:15px;">🏆</div>
+            <p>Nessuna season creata</p>
+            <p style="margin-top:10px;"><a href="season.html" style="color:#f39c12;">Crea la tua prima season →</a></p>
+          </div>
+        `;
+        return;
+      }
+      
+      list.innerHTML = seasons.map(([id, s]) => {
+        let statusClass = 'status-draft';
+        let statusText = 'BOZZA';
+        if (s.status === 'active') { statusClass = 'status-live'; statusText = '🟢 ATTIVA'; }
+        else if (s.status === 'registration') { statusClass = 'status-open'; statusText = 'ISCRIZIONI'; }
+        else if (s.status === 'completed') { statusClass = ''; statusText = '✓ FINITA'; }
+        
+        // Count teams
+        const teamCount = s.teamCount || 0;
+        
+        return `
+          <div class="gara-item" onclick="location.href='season.html?id=${id}'">
+            <div class="info">
+              <h3>${s.emoji || '🏆'} ${s.name || 'Season senza nome'}</h3>
+              <div class="meta">
+                <span>📅 ${s.startDate || '?'} → ${s.endDate || '?'}</span>
+                <span>👥 ${teamCount} team</span>
               </div>
             </div>
             <span class="status ${statusClass}">${statusText}</span>
