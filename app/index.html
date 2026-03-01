@@ -216,7 +216,9 @@
       const loading = document.getElementById('loading');
       loading.style.display = 'none';
       
-      let comps = Object.entries(competitions);
+      let comps = Object.entries(competitions)
+        // Exclude drafts and unnamed competitions
+        .filter(([id, c]) => c.name && c.status !== 'draft');
       
       // Filter
       if (currentFilter === 'open') {

@@ -501,9 +501,27 @@ Scaled</textarea>
     }
     
     window.addWod = () => {
+      // Save current input values before re-render
+      saveCurrentWodValues();
       wods.push({ name: '', type: 'fortime', timeCap: 12, description: '' });
       renderWods();
     };
+    
+    function saveCurrentWodValues() {
+      const cards = document.querySelectorAll('.wod-card');
+      cards.forEach((card, i) => {
+        if (wods[i]) {
+          const nameInput = card.querySelector('input[type="text"]');
+          const typeSelect = card.querySelector('select');
+          const timeCapInput = card.querySelector('input[type="number"]');
+          const descTextarea = card.querySelector('textarea');
+          if (nameInput) wods[i].name = nameInput.value;
+          if (typeSelect) wods[i].type = typeSelect.value;
+          if (timeCapInput) wods[i].timeCap = timeCapInput.value;
+          if (descTextarea) wods[i].description = descTextarea.value;
+        }
+      });
+    }
     
     window.deleteWod = (index) => {
       if (confirm('Eliminare questo WOD?')) {
