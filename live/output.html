@@ -119,6 +119,18 @@
   <script type="module">
     import { DB } from '../firebase-config.js';
     
+    // Get compId from URL - REQUIRED for multi-tenant
+    const params = new URLSearchParams(location.search);
+    const compId = params.get('c');
+    if (!compId) {
+      alert('❌ Manca parametro ?c=compId nell\'URL');
+    }
+    
+    // Paths isolated per competition
+    const streamsPath = `competitions/${compId}/streams`;
+    const currentHeatPath = `competitions/${compId}/currentHeat`;
+    const outputConfigPath = `competitions/${compId}/outputConfig`;
+    
     const ICE_SERVERS = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
@@ -131,8 +143,8 @@
     let addedCandidates = new Set();
     let unsubscribers = [];
     
-    // Listen for cameras
-    DB.listen('streams', (data) => {
+    // Listen for cameras - comp-specific path
+    DB.listen(streamsPath, (data) => {
       if (!data) { cameras.clear(); updateList(); return; }
       
       for (const [id, info] of Object.entries(data)) {
@@ -145,15 +157,15 @@
       updateList();
     });
     
-    // Listen for OUTPUT CONFIG from regia
-    DB.listen('outputConfig/camera', (camId) => {
+    // Listen for OUTPUT CONFIG from regia - comp-specific path
+    DB.listen(`${outputConfigPath}/camera`, (camId) => {
       if (camId && camId !== currentCamId) {
         console.log('Regia selected camera:', camId);
         selectCamera(camId);
       }
     });
     
-    DB.listen('outputConfig/overlay', (config) => {
+    DB.listen(`${outputConfigPath}/overlay`, (config) => {
       if (!config) return;
       document.querySelector('.top-bar').style.display = config.logo === false && config.live === false ? 'none' : '';
       document.querySelector('.logo').style.display = config.logo === false ? 'none' : '';
@@ -188,12 +200,12 @@
       addedCandidates = new Set();
       updateList();
       
-      // Clear old signaling
+      // Clear old signaling - comp-specific path
       try {
-        await DB.remove(`streams/${camId}/${VIEWER_ID}Offer`);
-        await DB.remove(`streams/${camId}/${VIEWER_ID}Candidates`);
-        await DB.remove(`streams/${camId}/${VIEWER_ID}Answer`);
-        await DB.remove(`streams/${camId}/${VIEWER_ID}CameraCandidates`);
+        await DB.remove(`${streamsPath}/${camId}/${VIEWER_ID}Offer`);
+        await DB.remove(`${streamsPath}/${camId}/${VIEWER_ID}Candidates`);
+        await DB.remove(`${streamsPath}/${camId}/${VIEWER_ID}Answer`);
+        await DB.remove(`${streamsPath}/${camId}/${VIEWER_ID}CameraCandidates`);
       } catch(e) {}
       
       await new Promise(r => setTimeout(r, 150));
@@ -213,7 +225,7 @@
       pc.onicecandidate = async (e) => {
         if (e.candidate && !e.candidate.candidate.includes('.local')) {
           const id = `${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
-          await DB.set(`streams/${camId}/${VIEWER_ID}Candidates/${id}`, e.candidate.toJSON());
+          await DB.set(`${streamsPath}/${camId}/${VIEWER_ID}Candidates/${id}`, e.candidate.toJSON());
         }
       };
       
@@ -225,15 +237,15 @@
       pc.addTransceiver('video', { direction: 'recvonly' });
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      await DB.set(`streams/${camId}/${VIEWER_ID}Offer`, { type: offer.type, sdp: offer.sdp });
+      await DB.set(`${streamsPath}/${camId}/${VIEWER_ID}Offer`, { type: offer.type, sdp: offer.sdp });
       
       // Listen for answer
-      const unsubAnswer = DB.listen(`streams/${camId}/${VIEWER_ID}Answer`, async (answer) => {
+      const unsubAnswer = DB.listen(`${streamsPath}/${camId}/${VIEWER_ID}Answer`, async (answer) => {
         if (!answer || !pc || pc.signalingState === 'stable') return;
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
         
         // Listen for camera candidates
-        const unsubCands = DB.listen(`streams/${camId}/${VIEWER_ID}CameraCandidates`, async (cands) => {
+        const unsubCands = DB.listen(`${streamsPath}/${camId}/${VIEWER_ID}CameraCandidates`, async (cands) => {
           if (!cands || !pc) return;
           for (const [id, cand] of Object.entries(cands)) {
             if (addedCandidates.has(id)) continue;
@@ -252,10 +264,16 @@
       document.getElementById('sidebar').classList.toggle('open');
     };
     
-    // Timer from Firebase
+    // Timer & WOD info from currentHeat - comp-specific path
     let timerInterval = null;
-    DB.listen('timer', (data) => {
-      if (!data) return;
+    DB.listen(currentHeatPath, (heat) => {
+      if (!heat) {
+        // Clear timer when no heat
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        document.getElementById('timer').textContent = '00:00';
+        return;
+      }
+      
       const el = document.getElementById('timer');
       
       // Clear previous interval
@@ -264,27 +282,35 @@
         timerInterval = null;
       }
       
-      if (data.status === 'countdown') {
+      // Timer logic based on heat status
+      if (heat.status === 'countdown' && heat.countdownStartedAt) {
         el.className = 'timer countdown';
-        el.textContent = data.value || '10';
-      } else if (data.status === 'running' && data.startTime) {
+        const tick = () => {
+          const elapsed = Math.floor((Date.now() - heat.countdownStartedAt) / 1000);
+          const remaining = Math.max(0, (heat.countdownFrom || 10) - elapsed);
+          el.textContent = remaining.toString();
+          if (remaining <= 0 && timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+        };
+        tick();
+        timerInterval = setInterval(tick, 100); // Faster for countdown
+      } else if (heat.status === 'running' && heat.startedAt) {
         el.className = 'timer';
         const tick = () => {
-          const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+          const elapsed = Math.floor((Date.now() - heat.startedAt) / 1000);
           const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
           const secs = (elapsed % 60).toString().padStart(2, '0');
           el.textContent = `${mins}:${secs}`;
         };
-        tick(); // Initial tick
+        tick();
         timerInterval = setInterval(tick, 1000);
-      } else if (data.status === 'stopped') {
-        el.textContent = '00:00';
+      } else if (heat.status === 'done') {
+        el.textContent = '✓ DONE';
       }
-    });
-    
-    // WOD info
-    DB.listen('currentHeat', (heat) => {
-      if (!heat) return;
+      
+      // WOD info
       document.getElementById('heatInfo').textContent = `Heat ${heat.number || '?'} • ${heat.category || ''}`;
       document.getElementById('wodName').textContent = heat.wodName || 'WOD';
       document.getElementById('wodDesc').textContent = heat.wodDesc || '';

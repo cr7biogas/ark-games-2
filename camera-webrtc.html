@@ -114,12 +114,24 @@
   <script type="module">
     import { DB } from './firebase-config.js';
     
+    // Get compId from URL - REQUIRED for multi-tenant
+    const params = new URLSearchParams(location.search);
+    const compId = params.get('c');
+    if (!compId) {
+      document.getElementById('error').textContent = '❌ Manca parametro ?c=compId';
+      document.getElementById('error').classList.remove('hidden');
+      document.querySelector('.btn-primary').disabled = true;
+    }
+    
     const ICE_SERVERS = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
     const HEARTBEAT_INTERVAL = 5000;
     const VIEWER_IDS = ['viewer', 'obs', 'output']; // Support multiple viewers
+    
+    // Paths isolated per competition
+    const streamsPath = `competitions/${compId}/streams`;
     
     let camId = null;
     let camName = '';
@@ -173,7 +185,7 @@
         document.getElementById('camId').textContent = camId;
         
         // Register with position for auto-assignment
-        await DB.set(`streams/${camId}`, {
+        await DB.set(`${streamsPath}/${camId}`, {
           name: camName, quality, status: 'waiting',
           position: position, // 0=Lane1, 1=Lane2, 2=Lane3, 3=Overview
           createdAt: Date.now(), lastHeartbeat: Date.now()
@@ -186,7 +198,7 @@
         
         // Heartbeat
         heartbeatInterval = setInterval(async () => {
-          await DB.update(`streams/${camId}`, { lastHeartbeat: Date.now() });
+          await DB.update(`${streamsPath}/${camId}`, { lastHeartbeat: Date.now() });
         }, HEARTBEAT_INTERVAL);
         
         log('Camera started, listening for viewers: ' + VIEWER_IDS.join(', '));
@@ -198,7 +210,7 @@
     };
     
     function listenForViewer(viewerId) {
-      const offerPath = `streams/${camId}/${viewerId}Offer`;
+      const offerPath = `${streamsPath}/${camId}/${viewerId}Offer`;
       
       DB.listen(offerPath, async (offer) => {
         if (!offer) return;
@@ -228,7 +240,7 @@
       pc.onicecandidate = async (e) => {
         if (e.candidate && !e.candidate.candidate.includes('.local')) {
           const id = `${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
-          await DB.set(`streams/${camId}/${viewerId}CameraCandidates/${id}`, e.candidate.toJSON());
+          await DB.set(`${streamsPath}/${camId}/${viewerId}CameraCandidates/${id}`, e.candidate.toJSON());
         }
       };
       
@@ -237,7 +249,7 @@
         log(`${viewerId}: ${pc.connectionState}`);
         updateViewerCount();
         if (pc.connectionState === 'connected') {
-          DB.update(`streams/${camId}`, { status: 'streaming' });
+          DB.update(`${streamsPath}/${camId}`, { status: 'streaming' });
         }
       };
       
@@ -247,12 +259,12 @@
       // Create answer
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      await DB.set(`streams/${camId}/${viewerId}Answer`, { type: answer.type, sdp: answer.sdp });
+      await DB.set(`${streamsPath}/${camId}/${viewerId}Answer`, { type: answer.type, sdp: answer.sdp });
       
       log(`Answer sent to ${viewerId}`);
       
       // Listen for viewer candidates
-      const unsub = DB.listen(`streams/${camId}/${viewerId}Candidates`, async (cands) => {
+      const unsub = DB.listen(`${streamsPath}/${camId}/${viewerId}Candidates`, async (cands) => {
         if (!cands || !pc) return;
         for (const [id, cand] of Object.entries(cands)) {
           if (viewer.addedCandidates.has(id)) continue;
@@ -307,12 +319,12 @@
         v.pc?.close();
       });
       stream?.getTracks().forEach(t => t.stop());
-      if (camId) await DB.remove(`streams/${camId}`);
+      if (camId) await DB.remove(`${streamsPath}/${camId}`);
       location.reload();
     };
     
     window.addEventListener('pagehide', () => {
-      if (camId) DB.remove(`streams/${camId}`);
+      if (camId) DB.remove(`${streamsPath}/${camId}`);
     });
   </script>
 </body>

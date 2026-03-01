@@ -418,6 +418,17 @@
   <script type="module">
     import { DB } from './firebase-config.js';
     
+    // Get compId from URL - REQUIRED for multi-tenant
+    const params = new URLSearchParams(location.search);
+    const compId = params.get('c');
+    if (!compId) {
+      alert('❌ Manca parametro ?c=compId nell\'URL');
+    }
+    
+    // Paths isolated per competition
+    const streamsPath = `competitions/${compId}/streams`;
+    const outputConfigPath = `competitions/${compId}/outputConfig`;
+    
     const ICE_SERVERS = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
@@ -439,8 +450,8 @@
       while (div.children.length > 30) div.removeChild(div.lastChild);
     }
     
-    // Listen for cameras
-    DB.listen('streams', (data) => {
+    // Listen for cameras - comp-specific path
+    DB.listen(streamsPath, (data) => {
       if (!data) {
         cameras.clear();
         updateUI();
@@ -573,10 +584,10 @@
       
       // Clear old signaling
       try {
-        await DB.remove(`streams/${camId}/viewerOffer`);
-        await DB.remove(`streams/${camId}/viewerCandidates`);
-        await DB.remove(`streams/${camId}/viewerAnswer`);
-        await DB.remove(`streams/${camId}/viewerCameraCandidates`);
+        await DB.remove(`${streamsPath}/${camId}/viewerOffer`);
+        await DB.remove(`${streamsPath}/${camId}/viewerCandidates`);
+        await DB.remove(`${streamsPath}/${camId}/viewerAnswer`);
+        await DB.remove(`${streamsPath}/${camId}/viewerCameraCandidates`);
       } catch(e) {}
       
       await new Promise(r => setTimeout(r, 200));
@@ -602,7 +613,7 @@
             return;
           }
           const id = `${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
-          await DB.set(`streams/${camId}/viewerCandidates/${id}`, e.candidate.toJSON());
+          await DB.set(`${streamsPath}/${camId}/viewerCandidates/${id}`, e.candidate.toJSON());
         }
       };
       
@@ -619,13 +630,13 @@
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       
-      await DB.set(`streams/${camId}/viewerOffer`, { type: offer.type, sdp: offer.sdp });
+      await DB.set(`${streamsPath}/${camId}/viewerOffer`, { type: offer.type, sdp: offer.sdp });
       log(`Offer inviato a ${cam.info.name}`);
       
       // Listen for answer, then candidates
       let candidatesStarted = false;
       
-      const unsubAnswer = DB.listen(`streams/${camId}/viewerAnswer`, async (answer) => {
+      const unsubAnswer = DB.listen(`${streamsPath}/${camId}/viewerAnswer`, async (answer) => {
         if (!answer || !pc || pc.signalingState === 'stable') return;
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -642,7 +653,7 @@
       cam.unsubscribers.push(unsubAnswer);
       
       function startCandidateListener() {
-        const unsubCands = DB.listen(`streams/${camId}/viewerCameraCandidates`, async (cands) => {
+        const unsubCands = DB.listen(`${streamsPath}/${camId}/viewerCameraCandidates`, async (cands) => {
           if (!cands || !pc) return;
           for (const [id, cand] of Object.entries(cands)) {
             if (cam.addedCandidates.has(id)) continue;
@@ -669,13 +680,13 @@
     
     window.cleanupAll = async () => {
       if (!confirm('Rimuovere tutte le camere da Firebase?')) return;
-      await DB.remove('streams');
+      await DB.remove(streamsPath);
       log('Tutte le camere rimosse');
     };
     
     // === OUTPUT CONTROL ===
     window.setOutputCamera = async (camId) => {
-      await DB.set('outputConfig/camera', camId || null);
+      await DB.set(`${outputConfigPath}/camera`, camId || null);
       log(`Output camera: ${camId || 'nessuna'}`);
     };
     
@@ -683,7 +694,7 @@
       // Find first slot with video and send to output
       for (let i = 0; i < 4; i++) {
         if (slots[i]) {
-          await DB.set('outputConfig/camera', slots[i]);
+          await DB.set(`${outputConfigPath}/camera`, slots[i]);
           document.getElementById('outputCameraSelect').value = slots[i];
           log(`Mandato a output: ${cameras.get(slots[i])?.info?.name || slots[i]}`, 'success');
           return;
@@ -699,7 +710,7 @@
         timer: document.getElementById('ovTimer').checked,
         wod: document.getElementById('ovWod').checked
       };
-      await DB.set('outputConfig/overlay', config);
+      await DB.set(`${outputConfigPath}/overlay`, config);
       log('Overlay aggiornate');
     };
     
@@ -715,7 +726,7 @@
     }
     
     // Load initial overlay config
-    DB.get('outputConfig/overlay').then(config => {
+    DB.get(`${outputConfigPath}/overlay`).then(config => {
       if (config) {
         document.getElementById('ovLogo').checked = config.logo !== false;
         document.getElementById('ovLive').checked = config.live !== false;

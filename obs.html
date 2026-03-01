@@ -202,6 +202,17 @@
   <script type="module">
     import { DB } from './firebase-config.js';
     
+    // Get compId from URL - REQUIRED for multi-tenant
+    const params = new URLSearchParams(location.search);
+    const compId = params.get('c');
+    if (!compId) {
+      alert('❌ Manca parametro ?c=compId nell\'URL');
+    }
+    
+    // Paths isolated per competition
+    const streamsPath = `competitions/${compId}/streams`;
+    const currentHeatPath = `competitions/${compId}/currentHeat`;
+    
     const ICE_SERVERS = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
@@ -215,8 +226,8 @@
     const cameras = new Map();
     let currentCamId = null;
     
-    // Listen for streams
-    DB.listen('streams', (data) => {
+    // Listen for streams - comp-specific path
+    DB.listen(streamsPath, (data) => {
       if (!data) return;
       
       for (const [id, info] of Object.entries(data)) {
@@ -272,11 +283,11 @@
       
       cam.addedCandidates = new Set();
       
-      // Clear old signaling for this viewer
+      // Clear old signaling for this viewer - comp-specific path
       const viewerId = 'obs';
       try {
-        await DB.remove(`streams/${camId}/${viewerId}Offer`);
-        await DB.remove(`streams/${camId}/${viewerId}Candidates`);
+        await DB.remove(`${streamsPath}/${camId}/${viewerId}Offer`);
+        await DB.remove(`${streamsPath}/${camId}/${viewerId}Candidates`);
       } catch(e) {}
       
       await new Promise(r => setTimeout(r, 100));
@@ -296,7 +307,7 @@
       pc.onicecandidate = async (e) => {
         if (e.candidate && !e.candidate.candidate.includes('.local')) {
           const id = `obs_${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
-          await DB.set(`streams/${camId}/${viewerId}Candidates/${id}`, e.candidate.toJSON());
+          await DB.set(`${streamsPath}/${camId}/${viewerId}Candidates/${id}`, e.candidate.toJSON());
         }
       };
       
@@ -305,17 +316,17 @@
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       
-      await DB.set(`streams/${camId}/${viewerId}Offer`, { type: offer.type, sdp: offer.sdp });
+      await DB.set(`${streamsPath}/${camId}/${viewerId}Offer`, { type: offer.type, sdp: offer.sdp });
       
       // Listen for answer
       let candidatesStarted = false;
-      const unsubAnswer = DB.listen(`streams/${camId}/${viewerId}Answer`, async (answer) => {
+      const unsubAnswer = DB.listen(`${streamsPath}/${camId}/${viewerId}Answer`, async (answer) => {
         if (!answer || !pc || pc.signalingState === 'stable') return;
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
         
         if (!candidatesStarted) {
           candidatesStarted = true;
-          const unsubCands = DB.listen(`streams/${camId}/${viewerId}CameraCandidates`, async (cands) => {
+          const unsubCands = DB.listen(`${streamsPath}/${camId}/${viewerId}CameraCandidates`, async (cands) => {
             if (!cands || !pc) return;
             for (const [id, cand] of Object.entries(cands)) {
               if (cam.addedCandidates.has(id)) continue;
@@ -340,42 +351,53 @@
       });
     });
     
-    // Timer from Firebase
+    // Timer & WOD info from currentHeat - comp-specific path
     let timerInterval = null;
-    let startTime = null;
     
-    DB.listen('timer', (data) => {
-      if (!data) return;
+    DB.listen(currentHeatPath, (heat) => {
+      if (!heat) {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        document.getElementById('timer').textContent = '00:00';
+        return;
+      }
       
       const timerEl = document.getElementById('timer');
       
-      if (data.status === 'countdown') {
-        timerEl.className = 'timer countdown';
-        timerEl.textContent = data.value || '10';
+      // Clear previous interval
+      if (timerInterval) {
         clearInterval(timerInterval);
-      } else if (data.status === 'running') {
-        timerEl.className = 'timer running';
-        startTime = data.startTime;
-        clearInterval(timerInterval);
-        timerInterval = setInterval(updateTimer, 100);
-      } else {
-        timerEl.className = 'timer';
-        clearInterval(timerInterval);
+        timerInterval = null;
       }
-    });
-    
-    function updateTimer() {
-      if (!startTime) return;
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-      const secs = (elapsed % 60).toString().padStart(2, '0');
-      document.getElementById('timer').textContent = `${mins}:${secs}`;
-    }
-    
-    // Heat/WOD info from Firebase
-    DB.listen('currentHeat', (heat) => {
-      if (!heat) return;
       
+      // Timer logic based on heat status
+      if (heat.status === 'countdown' && heat.countdownStartedAt) {
+        timerEl.className = 'timer countdown';
+        const tick = () => {
+          const elapsed = Math.floor((Date.now() - heat.countdownStartedAt) / 1000);
+          const remaining = Math.max(0, (heat.countdownFrom || 10) - elapsed);
+          timerEl.textContent = remaining.toString();
+          if (remaining <= 0 && timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+        };
+        tick();
+        timerInterval = setInterval(tick, 100);
+      } else if (heat.status === 'running' && heat.startedAt) {
+        timerEl.className = 'timer running';
+        const tick = () => {
+          const elapsed = Math.floor((Date.now() - heat.startedAt) / 1000);
+          const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+          const secs = (elapsed % 60).toString().padStart(2, '0');
+          timerEl.textContent = `${mins}:${secs}`;
+        };
+        tick();
+        timerInterval = setInterval(tick, 1000);
+      } else if (heat.status === 'done') {
+        timerEl.textContent = '✓ DONE';
+      }
+      
+      // WOD info
       document.getElementById('heatInfo').textContent = 
         `Heat ${heat.number || '?'} • ${heat.category || ''}`;
       document.getElementById('wodName').textContent = heat.wodName || 'WOD';
