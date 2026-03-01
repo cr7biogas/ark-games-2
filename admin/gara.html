@@ -254,6 +254,7 @@
       <button class="tab" data-tab="wod">🏋️ WOD</button>
       <button class="tab" data-tab="settings">⚙️ Impostazioni</button>
       <button class="tab" data-tab="share">🔗 Condividi</button>
+      <button class="tab" data-tab="live" style="background:#e74c3c;color:white;">🎬 LIVE</button>
     </div>
     
     <!-- INFO TAB -->
@@ -380,6 +381,33 @@ Scaled</textarea>
         <div style="text-align:center;margin-top:30px;">
           <p style="color:#888;margin-bottom:15px;">QR Code</p>
           <div id="qrcode" style="background:white;padding:20px;display:inline-block;border-radius:12px;"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- LIVE TAB -->
+    <div class="tab-content" id="tab-live">
+      <div class="section">
+        <h2>🎬 Controllo Gara LIVE</h2>
+        <p style="color:#888;margin-bottom:25px;">Gestisci timer, heat e giudici durante la competizione</p>
+        
+        <a href="../regia.html" id="regiaLink" class="action-btn primary" style="display:block;text-align:center;padding:25px;font-size:1.2rem;text-decoration:none;border-radius:16px;background:linear-gradient(135deg, #e74c3c, #c0392b);color:white;margin-bottom:20px;">
+          ⏱️ Apri Regia & Timer →
+        </a>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+          <a href="../judge.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+            ⚖️ Giudici
+          </a>
+          <a href="../live/leaderboard.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+            🏆 Classifica
+          </a>
+          <a href="../live/tv.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+            📺 TV Display
+          </a>
+          <a href="../stream-webrtc.html" class="action-btn" style="text-align:center;padding:20px;text-decoration:none;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;">
+            📹 Regia Camere
+          </a>
         </div>
       </div>
     </div>
