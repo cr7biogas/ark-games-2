@@ -205,8 +205,7 @@
     import { DB } from './firebase-config.js';
     
     // === CONFIG ===
-    const LAN_ONLY = true; // Force LAN-only connections (no internet)
-    const ICE_SERVERS = LAN_ONLY ? [] : [
+    const ICE_SERVERS = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
@@ -398,11 +397,6 @@
       // Handle ICE candidates
       peerConnection.onicecandidate = async (e) => {
         if (e.candidate) {
-          // LAN_ONLY: filter out non-host candidates (srflx, relay)
-          if (LAN_ONLY && !e.candidate.candidate.includes('typ host')) {
-            log('Skipping non-LAN candidate');
-            return;
-          }
           const candId = `${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
           log('Sending ICE candidate: ' + candId);
           await DB.set(`streams/${camId}/cameraCandidates/${candId}`, e.candidate.toJSON());
