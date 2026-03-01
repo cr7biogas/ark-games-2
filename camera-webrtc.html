@@ -75,8 +75,9 @@
       <option value="3">📍 Overview</option>
     </select>
     <select id="quality">
-      <option value="720">720p (HD)</option>
-      <option value="480" selected>480p (SD) - Consigliato</option>
+      <option value="1080">1080p (Full HD) ⭐</option>
+      <option value="720" selected>720p (HD) - Consigliato</option>
+      <option value="480">480p (SD) - Risparmio batteria</option>
       <option value="360">360p (Low)</option>
     </select>
     <button class="btn btn-primary" onclick="start()">📹 Avvia Camera</button>
@@ -122,7 +123,7 @@
     
     let camId = null;
     let camName = '';
-    let quality = '480';
+    let quality = '720';
     let stream = null;
     let facingMode = 'environment';
     let heartbeatInterval = null;
@@ -151,7 +152,7 @@
       camName = positionNames[position];
       quality = document.getElementById('quality').value;
       
-      const res = { '720': {w:1280,h:720}, '480': {w:854,h:480}, '360': {w:640,h:360} }[quality];
+      const res = { '1080': {w:1920,h:1080}, '720': {w:1280,h:720}, '480': {w:854,h:480}, '360': {w:640,h:360} }[quality];
       
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -266,7 +267,7 @@
     
     window.switchCam = async () => {
       facingMode = facingMode === 'environment' ? 'user' : 'environment';
-      const res = { '720': {w:1280,h:720}, '480': {w:854,h:480}, '360': {w:640,h:360} }[quality];
+      const res = { '1080': {w:1920,h:1080}, '720': {w:1280,h:720}, '480': {w:854,h:480}, '360': {w:640,h:360} }[quality];
       
       const oldStream = stream;
       stream = await navigator.mediaDevices.getUserMedia({
