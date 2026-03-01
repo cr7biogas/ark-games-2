@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🎬 Regia v2 - ARK Games 2.0</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a24;
+      --accent: #e94560;
+      --success: #00d26a;
+      --text-primary: #fff;
+      --text-secondary: #888;
+      --border: #2a2a3a;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .header {
+      background: var(--bg-secondary);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 { font-size: 18px; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+    .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .header .actions { margin-left: auto; display: flex; gap: 10px; }
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: var(--bg-card); color: white; }
+    
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      height: calc(100vh - 56px);
+    }
+    
+    .preview-area {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .main-preview {
+      flex: 1;
+      background: #000;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .main-preview canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .main-preview .no-feed {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      flex-direction: column;
+      gap: 10px;
+    }
+    .main-preview .no-feed .icon { font-size: 48px; }
+    
+    .camera-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .camera-slot {
+      aspect-ratio: 16/9;
+      background: var(--bg-card);
+      border-radius: 8px;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .camera-slot:hover { border-color: var(--border); }
+    .camera-slot.active { border-color: var(--accent); }
+    .camera-slot canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-slot .label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 6px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      font-size: 11px;
+    }
+    .camera-slot .status-indicator {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+    .camera-slot .status-indicator.error { background: #e74c3c; }
+    .camera-slot .status-indicator.loading { background: #f1c40f; animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0.3; } }
+    
+    .sidebar {
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-section {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    
+    .camera-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    .camera-item {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .camera-item .thumb {
+      width: 50px;
+      height: 30px;
+      background: #000;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .camera-item .thumb canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-item .info { flex: 1; }
+    .camera-item .name { font-size: 13px; font-weight: 600; }
+    .camera-item .url { font-size: 10px; color: var(--text-secondary); }
+    .camera-item select {
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: white;
+      font-size: 11px;
+    }
+    
+    .add-camera {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+    }
+    .add-camera input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: white;
+      font-size: 13px;
+    }
+    
+    .stats {
+      padding: 10px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .stats .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎬 Regia v2</h1>
+    <div class="status">
+      <div class="dot"></div>
+      <span id="statusText">Pronto</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="scanNetwork()">📡 Scan</button>
+      <button class="btn btn-secondary" onclick="toggleQuality()">📊 Quality: <span id="qualityLabel">HD</span></button>
+      <button class="btn btn-primary" onclick="toggleFullscreen()">⛶</button>
+    </div>
+  </div>
+  
+  <div class="main">
+    <div class="preview-area">
+      <div class="main-preview" id="mainPreview">
+        <canvas id="mainCanvas"></canvas>
+        <div class="no-feed" id="noFeed">
+          <div class="icon">📹</div>
+          <p>Seleziona una camera</p>
+        </div>
+      </div>
+      
+      <div class="camera-grid" id="cameraGrid">
+        <div class="camera-slot" data-slot="0" onclick="selectSlot(0)">
+          <canvas></canvas>
+          <div class="status-indicator loading"></div>
+          <div class="label">Lane 1</div>
+        </div>
+        <div class="camera-slot" data-slot="1" onclick="selectSlot(1)">
+          <canvas></canvas>
+          <div class="status-indicator loading"></div>
+          <div class="label">Lane 2</div>
+        </div>
+        <div class="camera-slot" data-slot="2" onclick="selectSlot(2)">
+          <canvas></canvas>
+          <div class="status-indicator loading"></div>
+          <div class="label">Lane 3</div>
+        </div>
+        <div class="camera-slot" data-slot="3" onclick="selectSlot(3)">
+          <canvas></canvas>
+          <div class="status-indicator loading"></div>
+          <div class="label">Overview</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sidebar">
+      <div class="add-camera">
+        <input type="text" id="cameraUrl" placeholder="192.168.1.X:4747">
+        <button class="btn btn-primary" onclick="addCamera()">+</button>
+      </div>
+      
+      <div class="camera-list" id="cameraList">
+        <p style="text-align:center;color:var(--text-secondary);padding:20px;font-size:12px">
+          Aggiungi camere o usa Scan
+        </p>
+      </div>
+      
+      <div class="stats">
+        <div class="row"><span>FPS:</span><span id="fpsCounter">0</span></div>
+        <div class="row"><span>Latency:</span><span id="latencyCounter">--</span></div>
+        <div class="row"><span>Camere attive:</span><span id="activeCameras">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === CAMERA STREAMING ENGINE ===
+    
+    class CameraStream {
+      constructor(url, canvas) {
+        this.url = url;
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.img = new Image();
+        this.isRunning = false;
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastFpsUpdate = Date.now();
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.quality = 'hd'; // hd, sd, low
+      }
+      
+      getStreamUrl() {
+        // Adjust resolution based on quality
+        const base = this.url;
+        switch(this.quality) {
+          case 'low': return `${base}/video?r=320x240`;
+          case 'sd': return `${base}/video?r=640x480`;
+          default: return `${base}/video`;
+        }
+      }
+      
+      start() {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.reconnectAttempts = 0;
+        this.loadFrame();
+      }
+      
+      stop() {
+        this.isRunning = false;
+        this.img.src = '';
+      }
+      
+      loadFrame() {
+        if (!this.isRunning) return;
+        
+        // Use timestamp to prevent caching
+        const url = `${this.url}/shot.jpg?t=${Date.now()}`;
+        
+        this.img.onload = () => {
+          if (!this.isRunning) return;
+          
+          // Draw to canvas
+          this.canvas.width = this.img.naturalWidth;
+          this.canvas.height = this.img.naturalHeight;
+          this.ctx.drawImage(this.img, 0, 0);
+          
+          // Update FPS counter
+          this.frameCount++;
+          const now = Date.now();
+          if (now - this.lastFpsUpdate >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
+          }
+          
+          // Reset reconnect counter on success
+          this.reconnectAttempts = 0;
+          
+          // Request next frame (adaptive delay based on FPS target)
+          const targetFps = this.quality === 'low' ? 10 : 15;
+          const delay = Math.max(1000 / targetFps - 30, 16);
+          setTimeout(() => this.loadFrame(), delay);
+        };
+        
+        this.img.onerror = () => {
+          if (!this.isRunning) return;
+          
+          this.reconnectAttempts++;
+          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            // Exponential backoff
+            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
+            setTimeout(() => this.loadFrame(), delay);
+          } else {
+            console.error(`Camera ${this.url} failed after ${this.maxReconnectAttempts} attempts`);
+            this.onError?.();
+          }
+        };
+        
+        this.img.src = url;
+      }
+      
+      setQuality(quality) {
+        this.quality = quality;
+      }
+    }
+    
+    // === APP STATE ===
+    
+    const cameras = new Map(); // url -> CameraStream
+    const slots = [null, null, null, null]; // slot index -> camera url
+    let activeSlot = null;
+    let quality = 'hd';
+    
+    // === FUNCTIONS ===
+    
+    function addCamera() {
+      const input = document.getElementById('cameraUrl');
+      let url = input.value.trim();
+      if (!url) return;
+      
+      if (!url.startsWith('http')) url = 'http://' + url;
+      
+      if (cameras.has(url)) {
+        alert('Camera già aggiunta');
+        return;
+      }
+      
+      // Create stream for this camera
+      const stream = new CameraStream(url, document.createElement('canvas'));
+      stream.onError = () => updateCameraStatus(url, 'error');
+      cameras.set(url, stream);
+      
+      input.value = '';
+      renderCameraList();
+    }
+    
+    function renderCameraList() {
+      const list = document.getElementById('cameraList');
+      
+      if (cameras.size === 0) {
+        list.innerHTML = `<p style="text-align:center;color:var(--text-secondary);padding:20px;font-size:12px">
+          Aggiungi camere o usa Scan
+        </p>`;
+        return;
+      }
+      
+      list.innerHTML = Array.from(cameras.entries()).map(([url, stream]) => `
+        <div class="camera-item">
+          <div class="thumb"><canvas id="thumb_${btoa(url).replace(/=/g,'')}"></canvas></div>
+          <div class="info">
+            <div class="name">${stream.quality.toUpperCase()}</div>
+            <div class="url">${url.replace('http://','')}</div>
+          </div>
+          <select onchange="assignToSlot('${url}', this.value)">
+            <option value="">--</option>
+            <option value="0" ${slots[0]===url?'selected':''}>Lane 1</option>
+            <option value="1" ${slots[1]===url?'selected':''}>Lane 2</option>
+            <option value="2" ${slots[2]===url?'selected':''}>Lane 3</option>
+            <option value="3" ${slots[3]===url?'selected':''}>Overview</option>
+          </select>
+        </div>
+      `).join('');
+      
+      // Update thumbnails
+      cameras.forEach((stream, url) => {
+        const thumbId = 'thumb_' + btoa(url).replace(/=/g,'');
+        const thumbCanvas = document.getElementById(thumbId);
+        if (thumbCanvas && stream.canvas.width > 0) {
+          const ctx = thumbCanvas.getContext('2d');
+          thumbCanvas.width = 50;
+          thumbCanvas.height = 30;
+          ctx.drawImage(stream.canvas, 0, 0, 50, 30);
+        }
+      });
+    }
+    
+    function assignToSlot(url, slotIndex) {
+      if (slotIndex === '') {
+        // Remove from slot
+        const idx = slots.indexOf(url);
+        if (idx >= 0) {
+          slots[idx] = null;
+          cameras.get(url)?.stop();
+        }
+      } else {
+        const idx = parseInt(slotIndex);
+        // Remove previous camera from this slot
+        if (slots[idx]) {
+          cameras.get(slots[idx])?.stop();
+        }
+        slots[idx] = url;
+        
+        // Start streaming to slot canvas
+        const slotEl = document.querySelector(`[data-slot="${idx}"]`);
+        const canvas = slotEl.querySelector('canvas');
+        const stream = cameras.get(url);
+        if (stream) {
+          stream.canvas = canvas;
+          stream.ctx = canvas.getContext('2d');
+          stream.start();
+          slotEl.querySelector('.status-indicator').className = 'status-indicator';
+        }
+      }
+      
+      updateStats();
+      renderCameraList();
+    }
+    
+    function selectSlot(index) {
+      document.querySelectorAll('.camera-slot').forEach(el => el.classList.remove('active'));
+      document.querySelector(`[data-slot="${index}"]`).classList.add('active');
+      
+      activeSlot = index;
+      
+      const url = slots[index];
+      const noFeed = document.getElementById('noFeed');
+      const mainCanvas = document.getElementById('mainCanvas');
+      
+      if (url && cameras.has(url)) {
+        noFeed.style.display = 'none';
+        
+        // Copy from slot canvas to main
+        const stream = cameras.get(url);
+        const render = () => {
+          if (activeSlot !== index || !stream.isRunning) return;
+          if (stream.canvas.width > 0) {
+            mainCanvas.width = stream.canvas.width;
+            mainCanvas.height = stream.canvas.height;
+            mainCanvas.getContext('2d').drawImage(stream.canvas, 0, 0);
+          }
+          requestAnimationFrame(render);
+        };
+        render();
+      } else {
+        noFeed.style.display = 'flex';
+      }
+    }
+    
+    function updateStats() {
+      const active = slots.filter(s => s !== null).length;
+      document.getElementById('activeCameras').textContent = active;
+      
+      let totalFps = 0;
+      cameras.forEach(stream => totalFps += stream.fps);
+      document.getElementById('fpsCounter').textContent = totalFps;
+    }
+    
+    function toggleQuality() {
+      const qualities = ['hd', 'sd', 'low'];
+      const idx = qualities.indexOf(quality);
+      quality = qualities[(idx + 1) % qualities.length];
+      
+      document.getElementById('qualityLabel').textContent = quality.toUpperCase();
+      
+      cameras.forEach(stream => stream.setQuality(quality));
+    }
+    
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    
+    async function scanNetwork() {
+      document.getElementById('statusText').textContent = 'Scansione...';
+      
+      const baseIps = ['192.168.1', '192.168.0', '10.0.0'];
+      const ports = [4747, 8080];
+      
+      for (const base of baseIps) {
+        for (let i = 100; i <= 120; i++) {
+          for (const port of ports) {
+            const url = `http://${base}.${i}:${port}`;
+            try {
+              const controller = new AbortController();
+              setTimeout(() => controller.abort(), 300);
+              await fetch(`${url}/shot.jpg`, { signal: controller.signal, mode: 'no-cors' });
+              
+              if (!cameras.has(url)) {
+                const stream = new CameraStream(url, document.createElement('canvas'));
+                cameras.set(url, stream);
+              }
+            } catch (e) {}
+          }
+        }
+      }
+      
+      document.getElementById('statusText').textContent = `Trovate ${cameras.size} camere`;
+      renderCameraList();
+    }
+    
+    // Update stats every second
+    setInterval(updateStats, 1000);
+    
+    // Initial render
+    renderCameraList();
+  </script>
+</body>
+</html>
