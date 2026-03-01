@@ -57,10 +57,46 @@
 
 ---
 
-## 🧊 FREEZER - Ruolo ADMIN
-*In attesa...*
+## 🧊 FREEZER - Ruolo ADMIN (⭐⭐⭐⭐ MVP Solid)
+
+### 🐛 BUG CRITICI
+- [x] **BUG 1:** compId auto-creato senza conferma → FIXED
+- [ ] **BUG 2:** startHeat usa lanes giudici, non timeline
+- [ ] **BUG 3:** setTimeout per fine heat non affidabile
+- [x] **BUG 4:** Team ID non unico → FIXED
+- [ ] **BUG 5:** No validazione form WOD
+- [ ] **BUG 6:** deleteWod non aggiorna timeline
+
+### 🎨 UX ISSUES
+- [ ] Alert() nativi → Toast/Snackbar
+- [ ] No conferma salvataggio gara
+- [ ] Tab Controllo: START disabilitato senza spiegazione
+- [ ] Manca "Modifica WOD"
+- [ ] Timeline non mostra orario fine
+- [ ] No export/stampa
 
 ---
 
-## 🎬 REGISTA - Ruolo PUBBLICO
-*In attesa...*
+## 🎬 REGISTA - Ruolo PUBBLICO (8/10)
+
+### ✅ FIXED
+- [x] Timer font responsive (280px/350px)
+- [x] Auto-rotate 30s
+
+### 🔴 TODO
+- [ ] Progress bar heat
+- [ ] Bandwidth monitor regia
+- [ ] Camera switch fade transition
+- [ ] Lane numbers 14px→18px
+
+---
+
+## 📊 SUMMARY
+
+| Agente | Ruolo | Score | Bug Found | Fixed |
+|--------|-------|-------|-----------|-------|
+| ANALYZER | Atleta | - | 12 | 3 |
+| REGISTA | Pubblico | 8/10 | 4 | 2 |
+| FREEZER | Admin | ⭐⭐⭐⭐ | 6 | 2 |
+
+**Total: 22 issues found, 7 fixed**
