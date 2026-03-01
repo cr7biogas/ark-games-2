@@ -174,32 +174,42 @@
   </header>
   
   <div class="tabs">
-    <button class="tab active" data-filter="all">Tutte</button>
-    <button class="tab" data-filter="open">Iscrizioni Aperte</button>
-    <button class="tab" data-filter="mine" id="tabMine" style="display:none;">Le Mie</button>
+    <button class="tab active" data-view="gare">🏋️ Gare</button>
+    <button class="tab" data-view="seasons">🏆 Seasons</button>
   </div>
   
   <div class="container">
     <div id="loading" class="loading">
       <div class="spinner"></div>
-      <p>Caricamento gare...</p>
+      <p>Caricamento...</p>
     </div>
     <div id="garaList"></div>
+    <div id="seasonList" style="display:none;"></div>
   </div>
 
   <script type="module">
     import { DB } from '../firebase-config.js';
     
     let competitions = {};
-    let currentFilter = 'all';
+    let seasons = {};
+    let currentView = 'gare';
     
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
       tab.onclick = () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        currentFilter = tab.dataset.filter;
-        renderList();
+        currentView = tab.dataset.view;
+        
+        if (currentView === 'gare') {
+          document.getElementById('garaList').style.display = 'block';
+          document.getElementById('seasonList').style.display = 'none';
+          renderGareList();
+        } else {
+          document.getElementById('garaList').style.display = 'none';
+          document.getElementById('seasonList').style.display = 'block';
+          renderSeasonList();
+        }
       };
     });
     
@@ -218,7 +228,7 @@
       return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
     }
     
-    function renderList() {
+    function renderGareList() {
       const list = document.getElementById('garaList');
       const loading = document.getElementById('loading');
       loading.style.display = 'none';
@@ -227,19 +237,11 @@
         // Exclude drafts and unnamed competitions
         .filter(([id, c]) => c.name && c.status !== 'draft');
       
-      // Filter
-      if (currentFilter === 'open') {
-        comps = comps.filter(([id, c]) => c.registrationOpen !== false && c.status !== 'done');
-      } else if (currentFilter === 'mine') {
-        // TODO: filter by user's registrations
-        comps = [];
-      }
-      
       if (comps.length === 0) {
         list.innerHTML = `
           <div class="empty-state">
             <div class="icon">🏋️</div>
-            <p>${currentFilter === 'mine' ? 'Non sei ancora iscritto a nessuna gara' : 'Nessuna gara disponibile'}</p>
+            <p>Nessuna gara disponibile</p>
           </div>
         `;
         return;
@@ -304,7 +306,80 @@
         }
       }
       
-      renderList();
+      renderGareList();
+    });
+    
+    // Load and render seasons
+    async function loadSeasons() {
+      seasons = await DB.get('seasons') || {};
+      if (currentView === 'seasons') {
+        renderSeasonList();
+      }
+    }
+    
+    function getSeasonBadge(season) {
+      if (season.status === 'active') return '<span class="gara-badge badge-live">🟢 IN CORSO</span>';
+      if (season.status === 'registration') return '<span class="gara-badge badge-open">ISCRIVITI</span>';
+      if (season.status === 'completed') return '<span class="gara-badge badge-closed">COMPLETATA</span>';
+      return '<span class="gara-badge badge-soon">PROSSIMAMENTE</span>';
+    }
+    
+    function renderSeasonList() {
+      const list = document.getElementById('seasonList');
+      const loading = document.getElementById('loading');
+      loading.style.display = 'none';
+      
+      // Filter: only show published seasons (registration or active)
+      let seasonList = Object.entries(seasons)
+        .filter(([id, s]) => s.name && (s.status === 'registration' || s.status === 'active'));
+      
+      if (seasonList.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🏆</div>
+            <p>Nessuna season disponibile</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Sort: Active first, then by start date
+      seasonList.sort((a, b) => {
+        if (a[1].status === 'active' && b[1].status !== 'active') return -1;
+        if (b[1].status === 'active' && a[1].status !== 'active') return 1;
+        return new Date(a[1].startDate || 0) - new Date(b[1].startDate || 0);
+      });
+      
+      list.innerHTML = seasonList.map(([id, season]) => {
+        const isActive = season.status === 'active';
+        
+        return `
+        <div class="gara-card ${isActive ? 'live' : ''}" onclick="location.href='season.html?id=${id}'">
+          <div class="gara-header">
+            <div class="gara-logo" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">${season.emoji || '🏆'}</div>
+            <div class="gara-info">
+              <h3>${season.name || 'Season Senza Nome'}</h3>
+              <div class="box-name">${season.categories?.join(' · ') || 'CrossFit'}</div>
+              <div class="date">📅 ${formatDate(season.startDate)} → ${formatDate(season.endDate)}</div>
+            </div>
+            ${getSeasonBadge(season)}
+          </div>
+          <div class="gara-footer">
+            <span>👥 ${season.teamCount || 0} team</span>
+            <span>🏋️ ${season.wodCount || 0} WOD</span>
+            <span>💰 €${season.price || 0}</span>
+          </div>
+        </div>
+      `}).join('');
+    }
+    
+    // Initial load of seasons
+    loadSeasons();
+    DB.listen('seasons', (data) => {
+      seasons = data || {};
+      if (currentView === 'seasons') {
+        renderSeasonList();
+      }
     });
   </script>
 </body>
