@@ -174,7 +174,7 @@
   </style>
 </head>
 <body>
-  <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+  <button class="fullscreen-btn" onclick="toggleFullscreen()" aria-label="Toggle fullscreen">⛶</button>
   
   <div class="header">
     <h1 id="compTitle">🏆 ARK Games <span class="live-badge">LIVE</span></h1>
@@ -231,13 +231,28 @@
       renderTabs();
       loadData();
       
-      // Auto-rotate categories
-      setInterval(() => {
+      // Auto-rotate categories (with manual override protection)
+      startAutoRotate();
+    }
+    
+    let autoRotateInterval = null;
+    let autoRotateTimeout = null;
+    
+    function startAutoRotate() {
+      if (autoRotateInterval) clearInterval(autoRotateInterval);
+      autoRotateInterval = setInterval(() => {
         const idx = categories.indexOf(currentCategory);
         currentCategory = categories[(idx + 1) % categories.length];
         updateActivTab();
         renderLeaderboard();
       }, 20000);
+    }
+    
+    function pauseAutoRotate() {
+      if (autoRotateInterval) clearInterval(autoRotateInterval);
+      if (autoRotateTimeout) clearTimeout(autoRotateTimeout);
+      // Resume auto-rotate after 60s of inactivity
+      autoRotateTimeout = setTimeout(startAutoRotate, 60000);
     }
     
     function renderTabs() {
@@ -254,6 +269,7 @@
     }
     
     window.selectCategory = (cat) => {
+      pauseAutoRotate(); // Stop auto-rotate on manual selection
       currentCategory = cat;
       updateActivTab();
       renderLeaderboard();
@@ -359,7 +375,7 @@
         </div>
         ${teamPoints.map((team, i) => `
           <div class="lb-row">
-            <div class="lb-rank">${i + 1}</div>
+            <div class="lb-rank">${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</div>
             <div class="lb-team">
               <span class="emoji">${team.emoji}</span>
               <span class="name">${team.name}</span>
