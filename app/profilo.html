@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Il Mio Profilo - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    
+    .navbar {
+      background: rgba(0,0,0,0.4);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(10px);
+    }
+    .navbar a { color: #888; text-decoration: none; }
+    .navbar .brand { color: #f39c12; font-weight: 700; }
+    
+    .profile-header {
+      text-align: center;
+      padding: 40px 20px 30px;
+    }
+    .avatar {
+      width: 100px; height: 100px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      border-radius: 50%;
+      margin: 0 auto 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+    .profile-header h1 { font-size: 1.5rem; margin-bottom: 5px; }
+    .profile-header .email { color: #888; font-size: 0.9rem; }
+    
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 25px;
+    }
+    .stat { text-align: center; }
+    .stat .number { font-size: 1.8rem; font-weight: 700; color: #f39c12; }
+    .stat .label { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .section { margin-bottom: 30px; }
+    .section h2 {
+      font-size: 0.9rem;
+      color: #f39c12;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+    }
+    
+    .gara-mini {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .gara-mini .info h3 { font-size: 1rem; margin-bottom: 3px; }
+    .gara-mini .info .date { font-size: 0.8rem; color: #888; }
+    .gara-mini .result { text-align: right; }
+    .gara-mini .position { font-size: 1.5rem; font-weight: 700; }
+    .gara-mini .category { font-size: 0.75rem; color: #888; }
+    
+    .menu-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .menu-item:hover { background: rgba(255,255,255,0.08); }
+    .menu-item .left { display: flex; align-items: center; gap: 12px; }
+    
+    .login-prompt {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .login-prompt .icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+    .login-prompt p { color: #888; margin-bottom: 20px; }
+    .login-btn {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .logout-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background: transparent;
+      border: 1px solid rgba(231, 76, 60, 0.4);
+      border-radius: 12px;
+      color: #e74c3c;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="./">← Gare</a>
+    <span class="brand">ARK Games</span>
+    <span></span>
+  </nav>
+  
+  <div id="content">
+    <div class="login-prompt">
+      <div class="icon">👤</div>
+      <p>Accedi per vedere il tuo profilo e le tue iscrizioni</p>
+      <button class="login-btn" onclick="showLogin()">Accedi / Registrati</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from '../firebase-config.js';
+    
+    // Check if logged in
+    const athlete = localStorage.getItem('ark_athlete');
+    if (athlete) {
+      showProfile(JSON.parse(athlete));
+    }
+    
+    window.showLogin = () => {
+      const email = prompt('Inserisci la tua email:');
+      if (!email) return;
+      
+      const name = prompt('Il tuo nome:');
+      if (!name) return;
+      
+      const data = { email, name, createdAt: Date.now() };
+      localStorage.setItem('ark_athlete', JSON.stringify(data));
+      showProfile(data);
+    };
+    
+    window.logout = () => {
+      localStorage.removeItem('ark_athlete');
+      location.reload();
+    };
+    
+    function showProfile(data) {
+      document.getElementById('content').innerHTML = `
+        <div class="profile-header">
+          <div class="avatar">💪</div>
+          <h1>${data.name || 'Atleta'}</h1>
+          <p class="email">${data.email || ''}</p>
+          
+          <div class="stats-row">
+            <div class="stat">
+              <div class="number">0</div>
+              <div class="label">Gare</div>
+            </div>
+            <div class="stat">
+              <div class="number">0</div>
+              <div class="label">Podi</div>
+            </div>
+            <div class="stat">
+              <div class="number">0</div>
+              <div class="label">Vittorie</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="container">
+          <div class="section">
+            <h2>🗓️ Prossime Gare</h2>
+            <p style="color:#666;text-align:center;padding:20px;">Nessuna iscrizione</p>
+          </div>
+          
+          <div class="section">
+            <h2>🏆 I Miei Risultati</h2>
+            <p style="color:#666;text-align:center;padding:20px;">Nessun risultato</p>
+          </div>
+          
+          <div class="section">
+            <h2>⚙️ Account</h2>
+            <div class="menu-item">
+              <div class="left">
+                <span>📝</span>
+                <span>Modifica Profilo</span>
+              </div>
+              <span style="color:#666;">→</span>
+            </div>
+            <div class="menu-item">
+              <div class="left">
+                <span>🔔</span>
+                <span>Notifiche</span>
+              </div>
+              <span style="color:#666;">→</span>
+            </div>
+          </div>
+          
+          <button class="logout-btn" onclick="logout()">🚪 Esci</button>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
