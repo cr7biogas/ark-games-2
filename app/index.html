@@ -261,9 +261,27 @@
       `).join('');
     }
     
-    // Load competitions
-    DB.listen('competitions', (data) => {
+    // Load competitions and count WODs/athletes dynamically
+    DB.listen('competitions', async (data) => {
       competitions = data || {};
+      
+      // Count WODs and registrations for each competition
+      for (const [id, comp] of Object.entries(competitions)) {
+        // Count WODs
+        const wods = await DB.get(`competitions/${id}/workouts`);
+        comp.wodCount = wods ? Object.keys(wods).length : 0;
+        
+        // Count registrations
+        const regs = await DB.get(`competitions/${id}/registrations`);
+        comp.athleteCount = regs ? Object.values(regs).filter(r => r.status === 'confirmed').length : 0;
+        
+        // Count teams as backup
+        if (comp.athleteCount === 0) {
+          const teams = await DB.get(`competitions/${id}/teams`);
+          comp.athleteCount = teams ? Object.keys(teams).length : 0;
+        }
+      }
+      
       renderList();
     });
   </script>
