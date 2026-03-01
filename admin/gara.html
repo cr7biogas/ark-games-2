@@ -968,12 +968,15 @@ Scaled</textarea>
     // Open page with compId parameter
     window.openWithCompId = (url, event) => {
       if (event) event.preventDefault();
+      console.log('openWithCompId called, compId=', compId); // DEBUG
       if (!compId) {
-        alert('Salva prima la gara');
+        alert('Salva prima la gara! compId mancante');
         return false;
       }
       const separator = url.includes('?') ? '&' : '?';
-      window.open(url + separator + 'c=' + compId, '_blank');
+      const fullUrl = url + separator + 'c=' + compId;
+      console.log('Navigating to:', fullUrl); // DEBUG
+      location.href = fullUrl;
       return false;
     };
   </script>
