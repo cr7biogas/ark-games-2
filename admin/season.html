@@ -286,12 +286,32 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Team per Slot (per categoria)</label>
-            <input type="number" id="teamsPerSlot" value="6" min="2" max="12">
+            <label>Durata Evento (ore)</label>
+            <input type="number" id="eventDuration" value="4" min="1" max="12" step="0.5">
+          </div>
+          <div class="form-group">
+            <label>Durata Heat (minuti)</label>
+            <input type="number" id="heatDuration" value="15" min="5" max="60">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Numero Lane</label>
+            <input type="number" id="numLanes" value="4" min="1" max="10">
           </div>
           <div class="form-group">
             <label>Prezzo Iscrizione (€)</label>
             <input type="number" id="price" value="50" min="0">
+          </div>
+        </div>
+        
+        <div class="card" style="background:rgba(52,152,219,0.1);border-color:rgba(52,152,219,0.3);margin-top:15px;">
+          <h4 style="color:#3498db;margin-bottom:10px;">📊 Capacità Evento (calcolata)</h4>
+          <div id="capacityCalc" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.9rem;">
+            <div>Heat per evento: <strong id="calcHeats">16</strong></div>
+            <div>Team per heat: <strong id="calcLanes">4</strong></div>
+            <div>Max team/categoria: <strong id="calcMaxCat">64</strong></div>
+            <div>Max team totali: <strong id="calcMaxTotal">192</strong></div>
           </div>
         </div>
         <div class="form-group">
@@ -640,6 +660,10 @@ Beginner</textarea>
       document.getElementById('teamsPerSlot').value = season.teamsPerSlot || 6;
       document.getElementById('price').value = season.price || 50;
       document.getElementById('prizePool').value = season.prizePool || '';
+      document.getElementById('eventDuration').value = season.eventDuration || 4;
+      document.getElementById('heatDuration').value = season.heatDuration || 15;
+      document.getElementById('numLanes').value = season.numLanes || 4;
+      updateCapacityCalc();
       document.getElementById('categories').value = (season.categories || ['RX', 'Scaled']).join('\n');
       document.getElementById('description').value = season.description || '';
       document.getElementById('seasonStatus').value = season.status || 'draft';
@@ -691,9 +715,42 @@ Beginner</textarea>
     }
     
     // Listen for form changes
-    ['seasonName', 'startDate', 'endDate', 'slotDay', 'teamsPerSlot', 'categories'].forEach(id => {
+    ['seasonName', 'startDate', 'endDate', 'slotDay', 'categories'].forEach(id => {
       document.getElementById(id).addEventListener('input', updateSummary);
     });
+    
+    // Listen for capacity changes
+    ['eventDuration', 'heatDuration', 'numLanes'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateCapacityCalc);
+    });
+    
+    function calculateMaxTeams() {
+      const eventDuration = parseFloat(document.getElementById('eventDuration').value) || 4;
+      const heatDuration = parseInt(document.getElementById('heatDuration').value) || 15;
+      const numLanes = parseInt(document.getElementById('numLanes').value) || 4;
+      const categories = document.getElementById('categories').value.split('\n').filter(c => c.trim()).length || 1;
+      
+      const heatsPerEvent = Math.floor((eventDuration * 60) / heatDuration);
+      const maxTeamsPerCategory = heatsPerEvent * numLanes;
+      const maxTeamsTotal = maxTeamsPerCategory * categories;
+      
+      return { heatsPerEvent, numLanes, maxTeamsPerCategory, maxTeamsTotal };
+    }
+    
+    function updateCapacityCalc() {
+      const calc = calculateMaxTeams();
+      const categories = document.getElementById('categories').value.split('\n').filter(c => c.trim()).length || 1;
+      
+      document.getElementById('calcHeats').textContent = calc.heatsPerEvent;
+      document.getElementById('calcLanes').textContent = calc.numLanes;
+      document.getElementById('calcMaxCat').textContent = calc.maxTeamsPerCategory;
+      document.getElementById('calcMaxTotal').textContent = calc.maxTeamsTotal + ` (${categories} cat)`;
+      
+      updateSummary();
+    }
+    
+    // Initial capacity calculation
+    setTimeout(updateCapacityCalc, 100);
     
     // Date validation
     document.getElementById('endDate').addEventListener('change', validateDates);
@@ -1183,6 +1240,10 @@ Beginner</textarea>
         teamsPerSlot: parseInt(document.getElementById('teamsPerSlot').value),
         price: parseFloat(document.getElementById('price').value),
         prizePool: document.getElementById('prizePool').value.trim(),
+        eventDuration: parseFloat(document.getElementById('eventDuration').value) || 4,
+        heatDuration: parseInt(document.getElementById('heatDuration').value) || 15,
+        numLanes: parseInt(document.getElementById('numLanes').value) || 4,
+        maxTeamsPerEvent: calculateMaxTeams(),
         categories: document.getElementById('categories').value.split('\n').filter(c => c.trim()),
         description: document.getElementById('description').value,
         status: document.getElementById('seasonStatus').value,

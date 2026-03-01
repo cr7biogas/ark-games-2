@@ -155,6 +155,8 @@
     .calendar .day.available { background: #27ae60; color: white; }
     .calendar .day.slot-day { border: 2px solid #f39c12; }
     .calendar .day.today { box-shadow: inset 0 0 0 2px #e94560; }
+    .calendar .day.full { background: #c0392b !important; color: white; cursor: not-allowed; opacity: 0.8; }
+    .calendar .day.almost-full { background: #e67e22; color: white; }
     
     .month-nav {
       display: flex;
@@ -393,6 +395,8 @@
           <p style="color:#888;font-size:0.85rem;margin-bottom:15px;">
             <span style="display:inline-block;width:12px;height:12px;background:#27ae60;border-radius:3px;"></span> Disponibile
             <span style="display:inline-block;width:12px;height:12px;border:2px solid #f39c12;border-radius:3px;margin-left:10px;"></span> Giorno gara
+            <span style="display:inline-block;width:12px;height:12px;background:#e67e22;border-radius:3px;margin-left:10px;"></span> Quasi pieno
+            <span style="display:inline-block;width:12px;height:12px;background:#c0392b;border-radius:3px;margin-left:10px;"></span> Pieno
           </p>
           
           <button class="btn btn-success" onclick="saveAvailability()">💾 Salva Disponibilità</button>
@@ -445,6 +449,7 @@
     let season = {};
     let wods = [];
     let teams = {};
+    let allTeamsAvailability = {}; // { date: count }
     let myTeam = null;
     let myTeamId = null;
     let schedule = {};
@@ -471,6 +476,14 @@
       wods = Object.entries(await DB.get(`seasons/${seasonId}/workouts`) || {}).map(([id, w]) => ({...w, id}));
       teams = await DB.get(`seasons/${seasonId}/teams`) || {};
       schedule = await DB.get(`seasons/${seasonId}/schedule`) || {};
+      
+      // Calculate availability count per date (for capacity check)
+      allTeamsAvailability = {};
+      Object.values(teams).forEach(team => {
+        (team.availability || []).forEach(date => {
+          allTeamsAvailability[date] = (allTeamsAvailability[date] || 0) + 1;
+        });
+      });
       
       // Update UI
       document.getElementById('seasonEmoji').textContent = season.emoji || '🏆';
@@ -632,6 +645,11 @@
         html += '<div class="day disabled"></div>';
       }
       
+      // Get max capacity per event
+      const maxTeamsPerEvent = season.maxTeamsPerEvent?.maxTeamsTotal || 
+                               ((season.eventDuration || 4) * 60 / (season.heatDuration || 15)) * (season.numLanes || 4) * 
+                               (season.categories?.length || 3);
+      
       // Days
       for (let d = 1; d <= lastDay.getDate(); d++) {
         const date = new Date(year, month, d);
@@ -644,17 +662,30 @@
         const isInRange = dateStr >= startDate && dateStr <= endDate;
         const isPast = dateStr < today;
         
+        // Check capacity
+        const currentCount = allTeamsAvailability[dateStr] || 0;
+        const isFull = currentCount >= maxTeamsPerEvent;
+        const isAlmostFull = currentCount >= maxTeamsPerEvent * 0.8;
+        
         const classes = [
           'day',
           isSlotDay && isInRange ? 'slot-day' : '',
           isAvailable ? 'available' : '',
           isToday ? 'today' : '',
-          (isPast || !isInRange) ? 'disabled' : ''
+          (isPast || !isInRange) ? 'disabled' : '',
+          (isFull && !isAvailable) ? 'full' : '',
+          (isAlmostFull && !isFull && !isAvailable) ? 'almost-full' : ''
         ].filter(Boolean).join(' ');
         
-        const clickable = isSlotDay && isInRange && !isPast;
+        // Can't click if full (unless already selected)
+        const clickable = isSlotDay && isInRange && !isPast && (!isFull || isAvailable);
         
-        html += `<div class="${classes}" ${clickable ? `onclick="toggleDay('${dateStr}')"` : ''}>${d}</div>`;
+        // Show count on slot days
+        const countLabel = isSlotDay && isInRange && !isPast ? 
+          `<span style="font-size:0.65rem;display:block;margin-top:2px;">${currentCount}/${maxTeamsPerEvent}</span>` : '';
+        
+        html += `<div class="${classes}" ${clickable ? `onclick="toggleDay('${dateStr}')"` : ''} 
+                  ${isFull && !isAvailable ? 'title="Giorno pieno - non disponibile"' : ''}>${d}${countLabel}</div>`;
       }
       
       cal.innerHTML = html;
@@ -663,9 +694,23 @@
     window.toggleDay = (dateStr) => {
       const idx = availability.indexOf(dateStr);
       if (idx >= 0) {
+        // Removing availability
         availability.splice(idx, 1);
+        allTeamsAvailability[dateStr] = Math.max(0, (allTeamsAvailability[dateStr] || 1) - 1);
       } else {
+        // Adding availability - check if full first
+        const maxTeamsPerEvent = season.maxTeamsPerEvent?.maxTeamsTotal || 
+                                 ((season.eventDuration || 4) * 60 / (season.heatDuration || 15)) * (season.numLanes || 4) * 
+                                 (season.categories?.length || 3);
+        const currentCount = allTeamsAvailability[dateStr] || 0;
+        
+        if (currentCount >= maxTeamsPerEvent) {
+          alert('⚠️ Questo giorno è pieno!\n\nScegli un\'altra data.');
+          return;
+        }
+        
         availability.push(dateStr);
+        allTeamsAvailability[dateStr] = (allTeamsAvailability[dateStr] || 0) + 1;
       }
       renderCalendar();
       updateAvailabilityStatus();
