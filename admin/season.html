@@ -328,17 +328,53 @@ Beginner</textarea>
         </div>
       </div>
       
-      <div class="card">
-        <h3>🤖 Genera WOD con AI</h3>
-        <div class="form-group">
-          <label>Quanti WOD generare?</label>
-          <input type="number" id="aiWodCount" value="12" min="1" max="52">
+      <div class="card" style="background:linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(52, 152, 219, 0.1));border-color:rgba(155, 89, 182, 0.3);">
+        <h3 style="color:#9b59b6;">🤖 Genera WOD con AI</h3>
+        <p style="color:#888;margin-bottom:15px;font-size:0.9rem;">L'AI creerà una progressione di WOD per l'intera season con scalature automatiche.</p>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+          <div class="form-group">
+            <label>Quanti WOD?</label>
+            <input type="number" id="aiWodCount" value="12" min="1" max="52">
+          </div>
+          <div class="form-group">
+            <label>Durata media (min)</label>
+            <input type="number" id="aiWodDuration" value="15" min="5" max="30">
+          </div>
         </div>
+        
         <div class="form-group">
-          <label>Stile (opzionale)</label>
-          <input type="text" id="aiWodStyle" placeholder="Es: CrossFit classico, funzionale, forza...">
+          <label>Stile</label>
+          <select id="aiWodStyle">
+            <option value="CrossFit classico">CrossFit Classico</option>
+            <option value="funzionale">Funzionale</option>
+            <option value="metabolico">Metabolico (cardio-focus)</option>
+            <option value="forza">Forza</option>
+            <option value="misto" selected>Mix Progressivo</option>
+          </select>
         </div>
-        <button class="btn btn-success" onclick="generateWodsAI()">🤖 Genera con AI</button>
+        
+        <div class="form-group">
+          <label>Difficoltà</label>
+          <select id="aiWodDifficulty">
+            <option value="beginner">Principiante</option>
+            <option value="intermediate">Intermedio</option>
+            <option value="advanced">Avanzato</option>
+            <option value="mixed" selected>Progressivo (facile → difficile)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Attrezzatura</label>
+          <select id="aiWodEquipment">
+            <option value="full" selected>Completa (box attrezzato)</option>
+            <option value="minimal">Minima (KB, DB, box)</option>
+            <option value="bodyweight">Solo corpo libero</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-success" onclick="generateWodsAI()" id="aiGenerateBtn">🤖 Genera WOD con AI</button>
+        <p id="aiStatus" style="color:#888;font-size:0.85rem;text-align:center;margin-top:10px;display:none;"></p>
       </div>
     </div>
     
@@ -440,6 +476,7 @@ Beginner</textarea>
 
   <script type="module">
     import { DB } from '../firebase-config.js';
+    import { generateWods, setApiKey, hasApiKey } from '../ai-generator.js';
     
     const params = new URLSearchParams(location.search);
     let seasonId = params.get('id');
@@ -682,11 +719,73 @@ Beginner</textarea>
     };
     
     window.generateWodsAI = async () => {
-      const count = parseInt(document.getElementById('aiWodCount').value) || 12;
-      const style = document.getElementById('aiWodStyle').value || 'CrossFit classico';
+      // Check/prompt for API key
+      if (!hasApiKey()) {
+        const key = prompt('🔑 Inserisci la tua API Key Groq:\n\n(Ottienila gratis su console.groq.com)');
+        if (!key) return;
+        setApiKey(key);
+      }
       
-      alert('🤖 Generazione AI in arrivo! (Groq API)\n\nGenererà ' + count + ' WOD stile: ' + style);
-      // TODO: Implement Groq API call
+      const btn = document.getElementById('aiGenerateBtn');
+      const status = document.getElementById('aiStatus');
+      
+      const count = parseInt(document.getElementById('aiWodCount').value) || 12;
+      const duration = parseInt(document.getElementById('aiWodDuration').value) || 15;
+      const style = document.getElementById('aiWodStyle').value;
+      const difficulty = document.getElementById('aiWodDifficulty').value;
+      const equipment = document.getElementById('aiWodEquipment').value;
+      const categories = document.getElementById('categories').value.split('\n').filter(c => c.trim());
+      
+      btn.disabled = true;
+      btn.textContent = '🔄 Generazione in corso...';
+      status.style.display = 'block';
+      status.style.color = '#888';
+      status.textContent = 'Connessione a Groq AI...';
+      
+      try {
+        status.textContent = `Generando ${count} WOD per la season...`;
+        
+        const generatedWods = await generateWods({
+          count,
+          type: 'season',
+          style,
+          categories,
+          difficulty,
+          equipment,
+          duration
+        });
+        
+        // Clear existing and add generated WODs
+        wods = generatedWods.map((w, i) => ({
+          id: w.id,
+          weekNumber: i + 1,
+          name: w.name || `Week ${i + 1}`,
+          type: w.type,
+          timeCapSec: w.timeCapSec || 600,
+          description: w.description,
+          movements: w.movements,
+          scalings: w.scalings
+        }));
+        
+        renderWods();
+        updateSummary();
+        
+        status.textContent = `✅ ${generatedWods.length} WOD generati con successo!`;
+        status.style.color = '#27ae60';
+        
+        setTimeout(() => {
+          alert(`🤖 AI ha generato ${generatedWods.length} WOD per la season!\n\nOgni WOD include scalature per: ${categories.join(', ')}\n\nI WOD sono numerati da 1 a ${count} (Week 1, Week 2, etc.)`);
+        }, 500);
+        
+      } catch (error) {
+        console.error('AI generation error:', error);
+        status.textContent = `❌ Errore: ${error.message}`;
+        status.style.color = '#e74c3c';
+        alert('Errore nella generazione AI. Riprova.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🤖 Genera WOD con AI';
+      }
     };
     
     // Schedule generator

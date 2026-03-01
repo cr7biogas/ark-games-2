@@ -326,7 +326,60 @@ Scaled</textarea>
       <div class="section">
         <h2>🏋️ WOD della Gara</h2>
         <div id="wodList"></div>
-        <button class="add-btn" onclick="addWod()">➕ Aggiungi WOD</button>
+        <button class="add-btn" onclick="addWod()">➕ Aggiungi WOD Manuale</button>
+      </div>
+      
+      <!-- AI Generator -->
+      <div class="section" style="margin-top:30px;padding:20px;background:linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(52, 152, 219, 0.1));border:1px solid rgba(155, 89, 182, 0.3);border-radius:16px;">
+        <h2 style="color:#9b59b6;">🤖 Genera WOD con AI</h2>
+        <p style="color:#888;margin-bottom:20px;">L'intelligenza artificiale creerà WOD bilanciati con scalature automatiche.</p>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quanti WOD?</label>
+            <input type="number" id="aiWodCount" value="3" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label>Durata media (min)</label>
+            <input type="number" id="aiWodDuration" value="12" min="5" max="30">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Stile</label>
+          <select id="aiWodStyle">
+            <option value="CrossFit classico">CrossFit Classico</option>
+            <option value="funzionale">Funzionale</option>
+            <option value="metabolico">Metabolico (cardio-focus)</option>
+            <option value="forza">Forza</option>
+            <option value="ginnastica">Ginnastica</option>
+            <option value="misto">Mix Completo</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Difficoltà</label>
+          <select id="aiWodDifficulty">
+            <option value="beginner">Principiante</option>
+            <option value="intermediate" selected>Intermedio</option>
+            <option value="advanced">Avanzato</option>
+            <option value="mixed">Progressivo (facile → difficile)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Attrezzatura</label>
+          <select id="aiWodEquipment">
+            <option value="full">Completa (box attrezzato)</option>
+            <option value="minimal">Minima (KB, DB, box)</option>
+            <option value="bodyweight">Solo corpo libero</option>
+          </select>
+        </div>
+        
+        <button onclick="generateWodsAI()" id="aiGenerateBtn" style="width:100%;padding:16px;background:linear-gradient(135deg, #9b59b6, #8e44ad);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;">
+          🤖 Genera WOD con AI
+        </button>
+        <p id="aiStatus" style="color:#888;font-size:0.85rem;text-align:center;margin-top:10px;display:none;"></p>
       </div>
     </div>
     
@@ -501,6 +554,7 @@ Scaled</textarea>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script type="module">
     import { DB } from '../firebase-config.js';
+    import { generateWods, setApiKey, hasApiKey } from '../ai-generator.js';
     
     const params = new URLSearchParams(location.search);
     let compId = params.get('id');
@@ -650,6 +704,77 @@ Scaled</textarea>
       const allCats = getCategories();
       wods.push({ name: '', type: 'fortime', timeCap: 12, description: '', categories: [...allCats] });
       renderWods();
+    };
+    
+    // AI WOD Generator
+    window.generateWodsAI = async () => {
+      // Check/prompt for API key
+      if (!hasApiKey()) {
+        const key = prompt('🔑 Inserisci la tua API Key Groq:\n\n(Ottienila gratis su console.groq.com)');
+        if (!key) return;
+        setApiKey(key);
+      }
+      
+      const btn = document.getElementById('aiGenerateBtn');
+      const status = document.getElementById('aiStatus');
+      
+      const count = parseInt(document.getElementById('aiWodCount').value) || 3;
+      const duration = parseInt(document.getElementById('aiWodDuration').value) || 12;
+      const style = document.getElementById('aiWodStyle').value;
+      const difficulty = document.getElementById('aiWodDifficulty').value;
+      const equipment = document.getElementById('aiWodEquipment').value;
+      const categories = getCategories();
+      
+      btn.disabled = true;
+      btn.textContent = '🔄 Generazione in corso...';
+      status.style.display = 'block';
+      status.textContent = 'Connessione a Groq AI...';
+      
+      try {
+        status.textContent = `Generando ${count} WOD con AI...`;
+        
+        const generatedWods = await generateWods({
+          count,
+          type: 'gara',
+          style,
+          categories,
+          difficulty,
+          equipment,
+          duration
+        });
+        
+        // Add to existing WODs
+        generatedWods.forEach(wod => {
+          wods.push({
+            id: wod.id,
+            name: wod.name,
+            type: wod.type,
+            timeCap: Math.round(wod.timeCapSec / 60),
+            description: wod.description + (wod.movements ? '\n\n' + wod.movements.map(m => `${m.name}: ${m.reps}`).join('\n') : ''),
+            categories: [...categories],
+            scalings: wod.scalings
+          });
+        });
+        
+        renderWods();
+        
+        status.textContent = `✅ ${generatedWods.length} WOD generati con successo!`;
+        status.style.color = '#27ae60';
+        
+        // Show scalings info
+        setTimeout(() => {
+          alert(`🤖 AI ha generato ${generatedWods.length} WOD!\n\nOgni WOD include scalature per: ${categories.join(', ')}\n\nControlla i dettagli nella lista sopra.`);
+        }, 500);
+        
+      } catch (error) {
+        console.error('AI generation error:', error);
+        status.textContent = `❌ Errore: ${error.message}`;
+        status.style.color = '#e74c3c';
+        alert('Errore nella generazione AI. Riprova.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🤖 Genera WOD con AI';
+      }
     };
     
     function saveCurrentWodValues() {
