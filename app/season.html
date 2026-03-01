@@ -428,6 +428,7 @@
     
     let season = {};
     let wods = [];
+    let teams = {};
     let myTeam = null;
     let myTeamId = null;
     let schedule = {};
@@ -452,6 +453,7 @@
       }
       
       wods = Object.entries(await DB.get(`seasons/${seasonId}/workouts`) || {}).map(([id, w]) => ({...w, id}));
+      teams = await DB.get(`seasons/${seasonId}/teams`) || {};
       schedule = await DB.get(`seasons/${seasonId}/schedule`) || {};
       
       // Update UI
@@ -521,6 +523,7 @@
     function renderInfo() {
       const weeks = Math.ceil((new Date(season.endDate) - new Date(season.startDate)) / (7 * 24 * 60 * 60 * 1000));
       const dayNames = { saturday: 'Sabato', sunday: 'Domenica', friday: 'Venerdì' };
+      const teamCount = Object.keys(teams).length;
       
       document.getElementById('seasonInfo').innerHTML = `
         <div class="info-item">
@@ -534,14 +537,14 @@
           <div class="label">WOD</div>
         </div>
         <div class="info-item">
+          <div class="icon">👥</div>
+          <div class="value">${teamCount}</div>
+          <div class="label">Team Iscritti</div>
+        </div>
+        <div class="info-item">
           <div class="icon">📆</div>
           <div class="value">${dayNames[season.slotDay] || 'TBD'}</div>
           <div class="label">Giorno Gara</div>
-        </div>
-        <div class="info-item">
-          <div class="icon">💰</div>
-          <div class="value">€${season.price || 0}</div>
-          <div class="label">Iscrizione</div>
         </div>
       `;
     }
