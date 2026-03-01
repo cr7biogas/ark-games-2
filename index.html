@@ -142,6 +142,8 @@
       Object.entries(comps).forEach(([id, comp]) => {
         const status = comp.status || 'upcoming';
         const statusLabel = { live: 'LIVE', upcoming: 'Prossima', ended: 'Conclusa' }[status];
+        const name = comp.name || comp.info?.name || 'Gara';
+        const date = comp.date || comp.info?.date || '';
         
         const card = document.createElement('div');
         card.className = 'comp-card';
@@ -149,8 +151,8 @@
         card.innerHTML = `
           <div class="comp-emoji">🐾</div>
           <div class="comp-info">
-            <h3>${comp.name || 'Gara'}</h3>
-            <p>${comp.date || 'Data non impostata'}</p>
+            <h3>${name}</h3>
+            <p>${date}${comp.location ? ' · ' + comp.location : ''}</p>
           </div>
           <span class="comp-status status-${status}">${statusLabel}</span>
         `;
