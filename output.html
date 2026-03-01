@@ -196,7 +196,9 @@
       currentPc = pc;
       
       pc.ontrack = (e) => {
-        document.getElementById('video').srcObject = e.streams[0];
+        const video = document.getElementById('video');
+        video.srcObject = e.streams[0];
+        video.play().catch(() => {});
         document.getElementById('noVideo').style.display = 'none';
         console.log('Video received');
       };
@@ -244,18 +246,32 @@
     };
     
     // Timer from Firebase
+    let timerInterval = null;
     DB.listen('timer', (data) => {
       if (!data) return;
       const el = document.getElementById('timer');
+      
+      // Clear previous interval
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      
       if (data.status === 'countdown') {
         el.className = 'timer countdown';
         el.textContent = data.value || '10';
       } else if (data.status === 'running' && data.startTime) {
         el.className = 'timer';
-        const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
-        const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-        const secs = (elapsed % 60).toString().padStart(2, '0');
-        el.textContent = `${mins}:${secs}`;
+        const tick = () => {
+          const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+          const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+          const secs = (elapsed % 60).toString().padStart(2, '0');
+          el.textContent = `${mins}:${secs}`;
+        };
+        tick(); // Initial tick
+        timerInterval = setInterval(tick, 1000);
+      } else if (data.status === 'stopped') {
+        el.textContent = '00:00';
       }
     });
     
