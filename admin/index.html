@@ -259,6 +259,26 @@
         <p>Gestisci le tue competizioni</p>
       </div>
       
+      <!-- GARA IN CORSO - evidenziata -->
+      <div id="liveGaraSection" style="display:none;margin-bottom:25px;">
+        <div id="liveGaraCard" style="background:linear-gradient(135deg, rgba(231,69,96,0.2), rgba(231,69,96,0.1));border:2px solid #e74c3c;border-radius:20px;padding:25px;cursor:pointer;animation:pulse 2s infinite;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <span style="background:#e74c3c;color:white;padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;margin-bottom:10px;display:inline-block;">🔴 LIVE ORA</span>
+              <h2 id="liveGaraName" style="font-size:1.4rem;margin-top:8px;">Gara in corso</h2>
+              <p id="liveGaraInfo" style="color:#888;font-size:0.9rem;margin-top:5px;"></p>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:2.5rem;">🎬</span>
+              <p style="color:#e74c3c;font-weight:600;font-size:0.9rem;margin-top:5px;">Vai ai controlli →</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
+      </style>
+      
       <div class="stats-grid">
         <div class="stat-card highlight">
           <div class="icon">🏆</div>
@@ -379,6 +399,22 @@
       const list = document.getElementById('garaList');
       
       const comps = Object.entries(competitions);
+      
+      // Check for LIVE competition
+      const liveComp = comps.find(([id, c]) => c.status === 'live');
+      const liveSection = document.getElementById('liveGaraSection');
+      
+      if (liveComp) {
+        liveSection.style.display = 'block';
+        document.getElementById('liveGaraName').textContent = `${liveComp[1].emoji || '🏆'} ${liveComp[1].name || 'Gara'}`;
+        document.getElementById('liveGaraInfo').textContent = `${liveComp[1].athleteCount || 0} atleti · ${liveComp[1].date || ''}`;
+        document.getElementById('liveGaraCard').onclick = () => {
+          // Go directly to LIVE controls
+          location.href = `gara.html?id=${liveComp[0]}&tab=live`;
+        };
+      } else {
+        liveSection.style.display = 'none';
+      }
       
       // Stats
       document.getElementById('statGare').textContent = comps.length;

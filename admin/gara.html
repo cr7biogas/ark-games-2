@@ -491,6 +491,7 @@ Scaled</textarea>
     
     const params = new URLSearchParams(location.search);
     let compId = params.get('id');
+    const initialTab = params.get('tab');
     let competition = {};
     let wods = [];
     let selectedEmoji = '🏆';
@@ -522,7 +523,13 @@ Scaled</textarea>
     
     // Load existing competition
     if (compId) {
-      loadCompetition();
+      loadCompetition().then(() => {
+        // Open specific tab if requested
+        if (initialTab) {
+          const tabBtn = document.querySelector(`[data-tab="${initialTab}"]`);
+          if (tabBtn) tabBtn.click();
+        }
+      });
     } else {
       updateShareLink();
     }
