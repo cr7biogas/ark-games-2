@@ -294,15 +294,12 @@
             <input type="number" id="price" value="50" min="0">
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>🏆 Monte Premi (€)</label>
-            <input type="number" id="prizePool" value="0" min="0" placeholder="Es: 2000">
-          </div>
-          <div class="form-group">
-            <label>Dettaglio Premi</label>
-            <input type="text" id="prizeDetails" placeholder="Es: 1°€1000, 2°€600, 3°€400">
-          </div>
+        <div class="form-group">
+          <label>🏆 Monte Premi per Categoria (una riga per categoria)</label>
+          <textarea id="prizePool" rows="4" placeholder="RX: 1°€800, 2°€500, 3°€300
+Scaled: 1°€500, 2°€300, 3°€200
+Beginner: 1°€300, 2°€200, 3°€100"></textarea>
+          <p style="color:#666;font-size:0.8rem;margin-top:5px;">💡 Formato: Categoria: 1°€xxx, 2°€xxx, 3°€xxx</p>
         </div>
         <div class="form-group">
           <label>Categorie (una per riga)</label>
@@ -642,8 +639,7 @@ Beginner</textarea>
       document.getElementById('slotTime').value = season.slotTime || '10:00';
       document.getElementById('teamsPerSlot').value = season.teamsPerSlot || 6;
       document.getElementById('price').value = season.price || 50;
-      document.getElementById('prizePool').value = season.prizePool || 0;
-      document.getElementById('prizeDetails').value = season.prizeDetails || '';
+      document.getElementById('prizePool').value = season.prizePool || '';
       document.getElementById('categories').value = (season.categories || ['RX', 'Scaled']).join('\n');
       document.getElementById('description').value = season.description || '';
       document.getElementById('seasonStatus').value = season.status || 'draft';
@@ -1175,8 +1171,7 @@ Beginner</textarea>
         slotTime: document.getElementById('slotTime').value,
         teamsPerSlot: parseInt(document.getElementById('teamsPerSlot').value),
         price: parseFloat(document.getElementById('price').value),
-        prizePool: parseInt(document.getElementById('prizePool').value) || 0,
-        prizeDetails: document.getElementById('prizeDetails').value.trim(),
+        prizePool: document.getElementById('prizePool').value.trim(),
         categories: document.getElementById('categories').value.split('\n').filter(c => c.trim()),
         description: document.getElementById('description').value,
         status: document.getElementById('seasonStatus').value,

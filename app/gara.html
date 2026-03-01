@@ -242,6 +242,19 @@
             </div>
           </div>
           
+          ${competition.prizePool && competition.prizePool.trim() ? `
+          <div class="section">
+            <h2>🏆 Monte Premi</h2>
+            <div style="background:linear-gradient(135deg,rgba(241,196,15,0.15),rgba(243,156,18,0.15));border:1px solid rgba(241,196,15,0.3);border-radius:12px;padding:15px;">
+              ${competition.prizePool.split('\\n').map(line => `
+                <div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);color:#f1c40f;">
+                  ${line.trim()}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+          
           ${competition.description ? `
           <div class="section">
             <h2>📝 Descrizione</h2>
@@ -256,10 +269,10 @@
       document.getElementById('price').innerHTML = `€${competition.price || 0} <span>/ atleta</span>`;
       
       // Show prize pool if available
-      if (competition.prizePool > 0) {
+      if (competition.prizePool && competition.prizePool.trim()) {
         const prizeEl = document.getElementById('prizePoolBadge');
         prizeEl.style.display = 'block';
-        prizeEl.textContent = `🏆 Monte premi: €${competition.prizePool}${competition.prizeDetails ? ' - ' + competition.prizeDetails : ''}`;
+        prizeEl.innerHTML = `🏆 Monte Premi`;
       }
       
       const btn = document.getElementById('ctaBtn');

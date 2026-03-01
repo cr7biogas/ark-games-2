@@ -525,11 +525,11 @@
       const dayNames = { saturday: 'Sabato', sunday: 'Domenica', friday: 'Venerdì' };
       const teamCount = Object.keys(teams).length;
       
-      const prizeHtml = season.prizePool > 0 ? `
-        <div class="info-item" style="background:linear-gradient(135deg,rgba(241,196,15,0.2),rgba(243,156,18,0.2));border:1px solid rgba(241,196,15,0.3);">
+      const prizeHtml = season.prizePool && season.prizePool.trim() ? `
+        <div class="info-item" style="background:linear-gradient(135deg,rgba(241,196,15,0.2),rgba(243,156,18,0.2));border:1px solid rgba(241,196,15,0.3);grid-column:1/-1;">
           <div class="icon">🏆</div>
-          <div class="value" style="color:#f1c40f;">€${season.prizePool}</div>
-          <div class="label">${season.prizeDetails || 'Monte Premi'}</div>
+          <div class="value" style="color:#f1c40f;font-size:1rem;">Monte Premi</div>
+          <div class="label" style="text-align:left;white-space:pre-line;margin-top:10px;">${season.prizePool}</div>
         </div>
       ` : '';
       
