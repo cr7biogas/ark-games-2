@@ -197,7 +197,7 @@
     });
     
     function getBadge(comp) {
-      if (comp.status === 'live') return '<span class="gara-badge badge-live">🔴 LIVE</span>';
+      if (comp.status === 'live') return '<span class="gara-badge badge-live">🔴 GUARDA LIVE</span>';
       if (comp.status === 'closed' || comp.status === 'done') return '<span class="gara-badge badge-closed">CONCLUSA</span>';
       
       const regOpen = comp.registrationOpen !== false;
@@ -241,8 +241,12 @@
       // Sort by date
       comps.sort((a, b) => new Date(a[1].date || 0) - new Date(b[1].date || 0));
       
-      list.innerHTML = comps.map(([id, comp]) => `
-        <div class="gara-card" onclick="location.href='gara.html?id=${id}'">
+      list.innerHTML = comps.map(([id, comp]) => {
+        const isLive = comp.status === 'live';
+        const clickUrl = isLive ? `../live/leaderboard.html?c=${id}` : `gara.html?id=${id}`;
+        
+        return `
+        <div class="gara-card" onclick="location.href='${clickUrl}'">
           <div class="gara-header">
             <div class="gara-logo">${comp.emoji || '🏆'}</div>
             <div class="gara-info">
@@ -253,12 +257,17 @@
             ${getBadge(comp)}
           </div>
           <div class="gara-footer">
-            <span>👥 ${comp.athleteCount || 0} iscritti</span>
-            <span>🏋️ ${comp.wodCount || 0} WOD</span>
-            <span>💰 €${comp.price || 0}</span>
+            ${isLive ? `
+              <span>🏆 Classifica Live</span>
+              <span>📺 Guarda</span>
+            ` : `
+              <span>👥 ${comp.athleteCount || 0} iscritti</span>
+              <span>🏋️ ${comp.wodCount || 0} WOD</span>
+              <span>💰 €${comp.price || 0}</span>
+            `}
           </div>
         </div>
-      `).join('');
+      `}).join('');
     }
     
     // Load competitions and count WODs/athletes dynamically
