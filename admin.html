@@ -423,12 +423,31 @@ Open</textarea>
     <!-- CONTROL -->
     <div class="section" id="sec-control">
       <div class="card">
+        <h2>🔐 Configurazione Giudici</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>PIN Accesso Giudici</label>
+            <input type="text" id="judgePin" placeholder="1234" maxlength="4" pattern="[0-9]{4}">
+          </div>
+          <div class="form-group">
+            <label>Blocca Sovrascrittura Score</label>
+            <select id="lockScores">
+              <option value="false">No - Giudici possono modificare</option>
+              <option value="true">Sì - Score bloccati dopo invio</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveJudgeConfig()">💾 Salva Configurazione</button>
+      </div>
+      
+      <div class="card">
         <h2>🎮 Controllo Gara</h2>
         <div id="judgeStatus">
           <div class="empty-state">Nessun giudice connesso</div>
         </div>
         <div style="margin-top:20px;display:flex;gap:10px">
           <button class="btn btn-primary" onclick="startHeat()" id="startBtn" disabled>▶️ START</button>
+          <button class="btn btn-secondary" onclick="stopHeat()">⏹️ STOP</button>
           <button class="btn btn-secondary" onclick="resetHeat()">🔄 Reset</button>
         </div>
       </div>
@@ -504,7 +523,24 @@ Open</textarea>
       loadTeams();
       loadTimeline();
       loadRegistrationConfig();
+      loadJudgeConfig();
     }
+    
+    async function loadJudgeConfig() {
+      const config = await DB.get(`competitions/${compId}/judgeConfig`);
+      if (config) {
+        document.getElementById('judgePin').value = config.pin || '1234';
+        document.getElementById('lockScores').value = config.lockScores ? 'true' : 'false';
+      }
+    }
+    
+    window.saveJudgeConfig = async () => {
+      const pin = document.getElementById('judgePin').value.trim() || '1234';
+      const lockScores = document.getElementById('lockScores').value === 'true';
+      
+      await DB.set(`competitions/${compId}/judgeConfig`, { pin, lockScores });
+      alert('✅ Configurazione giudici salvata!');
+    };
     
     function updateCategorySelects() {
       // WOD categories checkboxes
@@ -878,13 +914,80 @@ Open</textarea>
     });
     
     window.startHeat = async () => {
-      // TODO: implement heat start
-      alert('Starting heat...');
+      // Get current heat from timeline
+      const timeline = await DB.get(`competitions/${compId}/timeline`);
+      const judges = await DB.get(`competitions/${compId}/judges`);
+      
+      if (!timeline || !judges) {
+        alert('Errore: timeline o giudici non trovati');
+        return;
+      }
+      
+      // Find next pending heat
+      const heats = Object.entries(timeline)
+        .map(([id, h]) => ({ id, ...h }))
+        .filter(h => h.status === 'pending')
+        .sort((a, b) => a.number - b.number);
+      
+      if (heats.length === 0) {
+        alert('Nessuna heat in attesa');
+        return;
+      }
+      
+      const currentHeat = heats[0];
+      
+      // Get teams from judges
+      const judgeList = Object.values(judges).filter(j => j.status === 'ready' && j.present);
+      const lanes = judgeList.map(j => j.teamId);
+      
+      // Set current heat with countdown
+      await DB.set(`competitions/${compId}/currentHeat`, {
+        heatId: currentHeat.id,
+        number: currentHeat.number,
+        wodId: currentHeat.wodId,
+        wodName: currentHeat.wodName,
+        category: currentHeat.category,
+        timeCapSec: currentHeat.timeCapSec,
+        lanes: lanes,
+        status: 'countdown',
+        countdownFrom: 10,
+        countdownStartedAt: Date.now()
+      });
+      
+      // Update heat status
+      await DB.update(`competitions/${compId}/timeline/${currentHeat.id}`, { status: 'running' });
+      
+      // After 10 seconds, start the actual timer
+      setTimeout(async () => {
+        await DB.update(`competitions/${compId}/currentHeat`, {
+          status: 'running',
+          startedAt: Date.now()
+        });
+      }, 10000);
+      
+      // After time cap, mark as done
+      const totalTime = 10000 + (currentHeat.timeCapSec * 1000);
+      setTimeout(async () => {
+        await DB.update(`competitions/${compId}/currentHeat`, { status: 'done' });
+        await DB.update(`competitions/${compId}/timeline/${currentHeat.id}`, { status: 'done' });
+      }, totalTime);
+      
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('startBtn').textContent = '⏳ In corso...';
+    };
+    
+    window.stopHeat = async () => {
+      await DB.update(`competitions/${compId}/currentHeat`, { status: 'done' });
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').textContent = '▶️ START';
     };
     
     window.resetHeat = async () => {
       await DB.remove(`competitions/${compId}/judges`);
-      alert('Giudici resettati');
+      await DB.remove(`competitions/${compId}/currentHeat`);
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('startBtn').textContent = '▶️ START';
+      alert('Giudici e heat resettati');
     };
   </script>
 </body>

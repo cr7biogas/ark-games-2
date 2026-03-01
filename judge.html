@@ -271,9 +271,82 @@
       padding: 40px;
       color: #666;
     }
+    
+    /* PIN Login */
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #444;
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .pin-dot.filled {
+      background: #e94560;
+      border-color: #e94560;
+    }
+    .pin-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      background: #333;
+      color: #fff;
+      font-size: 24px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .pin-btn:hover {
+      background: #444;
+    }
+    .pin-btn:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 <body>
+
+  <!-- SCREEN 0: PIN Login -->
+  <div class="screen active" id="screen-login">
+    <div class="header">
+      <h1>🔐 Accesso Giudice</h1>
+      <p>Inserisci il PIN fornito dall'organizzatore</p>
+    </div>
+    
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="background:#1a1a2e;border-radius:20px;padding:30px;width:100%;max-width:300px">
+        <input type="text" id="judgeName" placeholder="👤 Il tuo nome" 
+          style="width:100%;padding:15px;border-radius:12px;border:2px solid #333;background:#0f0f1a;color:#fff;font-size:16px;margin-bottom:15px;text-align:center">
+        
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px" id="pinDisplay">
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto">
+          <button class="pin-btn" onclick="enterPin('1')">1</button>
+          <button class="pin-btn" onclick="enterPin('2')">2</button>
+          <button class="pin-btn" onclick="enterPin('3')">3</button>
+          <button class="pin-btn" onclick="enterPin('4')">4</button>
+          <button class="pin-btn" onclick="enterPin('5')">5</button>
+          <button class="pin-btn" onclick="enterPin('6')">6</button>
+          <button class="pin-btn" onclick="enterPin('7')">7</button>
+          <button class="pin-btn" onclick="enterPin('8')">8</button>
+          <button class="pin-btn" onclick="enterPin('9')">9</button>
+          <button class="pin-btn" onclick="clearPin()">⌫</button>
+          <button class="pin-btn" onclick="enterPin('0')">0</button>
+          <button class="pin-btn" onclick="submitPin()" style="background:#2ecc71">✓</button>
+        </div>
+        
+        <p id="pinError" style="color:#e94560;text-align:center;margin-top:15px;font-size:13px;display:none">
+          PIN errato. Riprova.
+        </p>
+      </div>
+    </div>
+  </div>
 
   <!-- SCREEN 1: Select WOD -->
   <div class="screen active" id="screen-wod">
@@ -404,18 +477,89 @@
       location.href = 'index.html';
     }
     
-    let judgeId = localStorage.getItem('ark2_judgeId');
-    if (!judgeId) {
-      judgeId = 'judge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-      localStorage.setItem('ark2_judgeId', judgeId);
-    }
-    
+    let judgeId = null;
+    let judgeName = '';
     let selectedWod = null;
     let selectedTeam = null;
     let allTeams = {};
     let allScores = {};
     let isReady = false;
     let timerInterval = null;
+    let currentPin = '';
+    let correctPin = '1234'; // Default PIN, loaded from Firebase
+    
+    // Load PIN from competition config
+    async function loadJudgeConfig() {
+      const config = await DB.get(`competitions/${compId}/judgeConfig`);
+      if (config?.pin) {
+        correctPin = config.pin;
+      }
+      
+      // Check if already logged in
+      const savedAuth = localStorage.getItem('ark2_judgeAuth');
+      if (savedAuth) {
+        const auth = JSON.parse(savedAuth);
+        if (auth.compId === compId && auth.expiry > Date.now()) {
+          judgeId = auth.judgeId;
+          judgeName = auth.name;
+          goToScreen('screen-wod');
+          loadWods();
+          return;
+        }
+      }
+    }
+    
+    // PIN entry functions
+    window.enterPin = (digit) => {
+      if (currentPin.length < 4) {
+        currentPin += digit;
+        updatePinDots();
+      }
+    };
+    
+    window.clearPin = () => {
+      currentPin = currentPin.slice(0, -1);
+      updatePinDots();
+    };
+    
+    function updatePinDots() {
+      const dots = document.querySelectorAll('.pin-dot');
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('filled', i < currentPin.length);
+      });
+    }
+    
+    window.submitPin = async () => {
+      const name = document.getElementById('judgeName').value.trim();
+      
+      if (!name) {
+        document.getElementById('pinError').textContent = 'Inserisci il tuo nome';
+        document.getElementById('pinError').style.display = 'block';
+        return;
+      }
+      
+      if (currentPin !== correctPin) {
+        document.getElementById('pinError').textContent = 'PIN errato. Riprova.';
+        document.getElementById('pinError').style.display = 'block';
+        currentPin = '';
+        updatePinDots();
+        return;
+      }
+      
+      // Success! Create judge ID and save auth
+      judgeId = 'judge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      judgeName = name;
+      
+      localStorage.setItem('ark2_judgeAuth', JSON.stringify({
+        compId,
+        judgeId,
+        name,
+        expiry: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      }));
+      
+      goToScreen('screen-wod');
+      loadWods();
+    };
     
     // Screen navigation
     window.goToScreen = (screenId) => {
@@ -723,18 +867,33 @@
         reps = parseInt(repsInput.value);
       }
       
-      if (!time && !reps) {
+      if (!time && (reps === null || reps === undefined)) {
         alert('Inserisci un tempo o le reps!');
         return;
       }
       
       const scoreKey = `${selectedTeam.id}_${selectedWod.id}`;
+      
+      // Check if score already exists and is locked
+      const config = await DB.get(`competitions/${compId}/judgeConfig`);
+      const existingScore = await DB.get(`competitions/${compId}/scores/${scoreKey}`);
+      
+      if (existingScore && config?.lockScores) {
+        const override = confirm(
+          `⚠️ Questo team ha già uno score!\n\n` +
+          `Score attuale: ${existingScore.time ? Math.floor(existingScore.time/60) + ':' + (existingScore.time%60).toString().padStart(2,'0') : existingScore.reps + ' reps'}\n\n` +
+          `Vuoi sovrascriverlo?`
+        );
+        if (!override) return;
+      }
+      
       await DB.set(`competitions/${compId}/scores/${scoreKey}`, {
         teamId: selectedTeam.id,
         wodId: selectedWod.id,
         time,
         reps,
         judgeId,
+        judgeName: judgeName || 'Unknown',
         timestamp: Date.now()
       });
       
@@ -750,8 +909,8 @@
       loadWods();
     };
     
-    // Init
-    loadWods();
+    // Init - Start with PIN login
+    loadJudgeConfig();
   </script>
 </body>
 </html>
