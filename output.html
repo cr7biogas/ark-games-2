@@ -6,300 +6,106 @@
   <title>📺 Output - ARK Games</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, sans-serif;
-      background: #000;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
-    }
+    body { font-family: -apple-system, sans-serif; background: #000; color: #fff; height: 100vh; overflow: hidden; }
     
-    .container {
-      height: 100vh;
-      display: grid;
-      grid-template-columns: 1fr 350px;
-    }
+    .output { width: 100vw; height: 100vh; position: relative; }
+    video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    .no-video { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #333; font-size: 80px; }
     
-    /* Main video area */
-    .main-video {
-      position: relative;
-      background: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* Overlays */
+    .top-bar {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 25px 40px;
+      background: linear-gradient(rgba(0,0,0,0.9), transparent);
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .main-video video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    .main-video .no-video {
-      color: #444;
-      font-size: 60px;
-    }
-    
-    /* Overlay elements */
-    .overlay-top {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      padding: 20px 30px;
-      background: linear-gradient(rgba(0,0,0,0.8), transparent);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-    
-    .logo {
-      font-size: 28px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .logo .emoji { font-size: 36px; }
-    
+    .logo { display: flex; align-items: center; gap: 15px; font-size: 36px; font-weight: 800; }
+    .logo-icon { font-size: 50px; }
     .live-badge {
-      background: #e94560;
-      padding: 8px 20px;
-      border-radius: 25px;
-      font-weight: 700;
-      font-size: 16px;
-      animation: pulse 2s infinite;
+      background: #e94560; padding: 10px 25px; border-radius: 30px;
+      font-weight: 700; font-size: 20px; animation: pulse 2s infinite;
     }
     @keyframes pulse { 50% { opacity: 0.7; } }
     
-    .overlay-timer {
-      position: absolute;
-      bottom: 30px;
-      left: 30px;
-      background: rgba(0,0,0,0.8);
-      padding: 20px 40px;
-      border-radius: 15px;
-      border-left: 5px solid #e94560;
+    .bottom-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 30px 40px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.9));
+      display: flex; justify-content: space-between; align-items: flex-end;
     }
-    .timer-label {
-      font-size: 14px;
-      color: #888;
-      margin-bottom: 5px;
+    .timer-box {
+      background: rgba(0,0,0,0.6); padding: 20px 40px; border-radius: 15px;
+      border-left: 6px solid #e94560;
     }
-    .timer-value {
-      font-size: 72px;
-      font-weight: 800;
-      font-family: 'SF Mono', Monaco, monospace;
-    }
-    .timer-value.countdown { color: #f1c40f; }
-    .timer-value.running { color: #2ecc71; }
-    .timer-value.stopped { color: #e74c3c; }
+    .timer-label { font-size: 14px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+    .timer { font-size: 80px; font-weight: 800; font-family: 'SF Mono', Monaco, monospace; color: #2ecc71; }
+    .timer.countdown { color: #f1c40f; }
     
-    .overlay-wod {
-      position: absolute;
-      bottom: 30px;
-      right: 30px;
-      background: rgba(0,0,0,0.8);
-      padding: 20px;
-      border-radius: 15px;
-      max-width: 300px;
-      text-align: right;
+    .wod-box {
+      background: rgba(0,0,0,0.6); padding: 20px 30px; border-radius: 15px;
+      text-align: right; max-width: 400px;
     }
-    .wod-name {
-      font-size: 24px;
-      font-weight: 700;
-      color: #e94560;
-      margin-bottom: 10px;
-    }
-    .wod-desc {
-      font-size: 14px;
-      color: #ccc;
-      line-height: 1.4;
-    }
+    .wod-heat { font-size: 14px; color: #888; margin-bottom: 5px; }
+    .wod-name { font-size: 28px; font-weight: 700; color: #e94560; margin-bottom: 8px; }
+    .wod-desc { font-size: 16px; color: #ccc; line-height: 1.4; }
     
-    /* Sidebar */
+    /* Camera selector sidebar */
     .sidebar {
-      background: #0a0a0f;
-      border-left: 1px solid #222;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      position: absolute; right: 0; top: 0; bottom: 0; width: 200px;
+      background: rgba(0,0,0,0.9); padding: 20px;
+      transform: translateX(100%); transition: transform 0.3s;
     }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar h3 { font-size: 14px; color: #888; margin-bottom: 15px; }
+    .cam-btn {
+      display: block; width: 100%; padding: 12px; margin-bottom: 10px;
+      border-radius: 8px; border: 2px solid #333; background: #111;
+      color: white; font-size: 14px; text-align: left; cursor: pointer;
+    }
+    .cam-btn:hover { border-color: #555; }
+    .cam-btn.active { border-color: #e94560; background: #2a1020; }
+    .cam-btn .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #666; margin-right: 8px; }
+    .cam-btn .status.live { background: #2ecc71; }
     
-    .sidebar-header {
-      padding: 20px;
-      background: #111;
-      border-bottom: 1px solid #222;
+    .toggle-btn {
+      position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+      width: 40px; height: 80px; border-radius: 8px;
+      background: rgba(255,255,255,0.1); border: none; color: white;
+      font-size: 20px; cursor: pointer;
     }
-    .sidebar-header h2 {
-      font-size: 18px;
-      margin-bottom: 15px;
-    }
-    
-    .source-select {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .source-btn {
-      padding: 12px;
-      border-radius: 8px;
-      border: 2px solid #333;
-      background: #1a1a24;
-      color: white;
-      font-size: 13px;
-      cursor: pointer;
-      text-align: center;
-    }
-    .source-btn:hover { border-color: #555; }
-    .source-btn.active { border-color: #e94560; background: #2a1a24; }
-    
-    .sidebar-section {
-      padding: 20px;
-      border-bottom: 1px solid #222;
-    }
-    .sidebar-section h3 {
-      font-size: 12px;
-      color: #888;
-      text-transform: uppercase;
-      margin-bottom: 15px;
-    }
-    
-    .overlay-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 0;
-    }
-    .overlay-toggle label { font-size: 14px; }
-    .toggle-switch {
-      width: 50px;
-      height: 26px;
-      background: #333;
-      border-radius: 13px;
-      position: relative;
-      cursor: pointer;
-    }
-    .toggle-switch.on { background: #2ecc71; }
-    .toggle-switch::after {
-      content: '';
-      position: absolute;
-      width: 22px;
-      height: 22px;
-      background: white;
-      border-radius: 50%;
-      top: 2px;
-      left: 2px;
-      transition: left 0.2s;
-    }
-    .toggle-switch.on::after { left: 26px; }
-    
-    /* Camera previews */
-    .camera-grid {
-      flex: 1;
-      padding: 15px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      overflow-y: auto;
-    }
-    .cam-preview {
-      aspect-ratio: 16/9;
-      background: #1a1a24;
-      border-radius: 8px;
-      overflow: hidden;
-      cursor: pointer;
-      border: 2px solid transparent;
-      position: relative;
-    }
-    .cam-preview:hover { border-color: #444; }
-    .cam-preview.active { border-color: #e94560; }
-    .cam-preview video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .cam-preview .label {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 5px;
-      background: rgba(0,0,0,0.7);
-      font-size: 11px;
-      text-align: center;
-    }
-    .cam-preview .status {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #666;
-    }
-    .cam-preview .status.live { background: #2ecc71; }
+    .toggle-btn:hover { background: rgba(255,255,255,0.2); }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="main-video" id="mainVideo">
-      <video id="outputVideo" autoplay playsinline muted></video>
-      <div class="no-video" id="noVideo">📹</div>
-      
-      <!-- Overlays -->
-      <div class="overlay-top">
-        <div class="logo">
-          <span class="emoji">🏋️</span>
-          <span>ARK Games</span>
-        </div>
-        <div class="live-badge" id="liveBadge">🔴 LIVE</div>
+  <div class="output">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="no-video" id="noVideo">📹</div>
+    
+    <div class="top-bar">
+      <div class="logo">
+        <span class="logo-icon">🏋️</span>
+        <span>ARK Games</span>
       </div>
-      
-      <div class="overlay-timer" id="overlayTimer">
-        <div class="timer-label">TEMPO</div>
-        <div class="timer-value running" id="timerValue">00:00</div>
+      <div class="live-badge">🔴 LIVE</div>
+    </div>
+    
+    <div class="bottom-bar">
+      <div class="timer-box">
+        <div class="timer-label">Tempo</div>
+        <div class="timer" id="timer">00:00</div>
       </div>
-      
-      <div class="overlay-wod" id="overlayWod" style="display:none">
+      <div class="wod-box">
+        <div class="wod-heat" id="heatInfo">Heat 1 • Beginner</div>
         <div class="wod-name" id="wodName">WOD 1</div>
-        <div class="wod-desc" id="wodDesc">21-15-9 Thrusters & Pull-ups</div>
+        <div class="wod-desc" id="wodDesc">In attesa...</div>
       </div>
     </div>
     
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <h2>📺 Output Preview</h2>
-        <div class="source-select" id="sourceSelect">
-          <button class="source-btn" data-slot="0">Lane 1</button>
-          <button class="source-btn" data-slot="1">Lane 2</button>
-          <button class="source-btn" data-slot="2">Lane 3</button>
-          <button class="source-btn" data-slot="3">Overview</button>
-        </div>
-      </div>
-      
-      <div class="sidebar-section">
-        <h3>🎨 Overlay</h3>
-        <div class="overlay-toggle">
-          <label>Logo ARK</label>
-          <div class="toggle-switch on" data-overlay="logo" onclick="toggleOverlay(this)"></div>
-        </div>
-        <div class="overlay-toggle">
-          <label>Badge LIVE</label>
-          <div class="toggle-switch on" data-overlay="live" onclick="toggleOverlay(this)"></div>
-        </div>
-        <div class="overlay-toggle">
-          <label>Timer</label>
-          <div class="toggle-switch on" data-overlay="timer" onclick="toggleOverlay(this)"></div>
-        </div>
-        <div class="overlay-toggle">
-          <label>WOD Info</label>
-          <div class="toggle-switch" data-overlay="wod" onclick="toggleOverlay(this)"></div>
-        </div>
-      </div>
-      
-      <h3 style="padding: 15px 20px 10px; font-size: 12px; color: #888;">📷 CAMERE</h3>
-      <div class="camera-grid" id="cameraGrid">
-        <!-- Populated by JS -->
-      </div>
+    <button class="toggle-btn" onclick="toggleSidebar()">◀</button>
+    
+    <div class="sidebar" id="sidebar">
+      <h3>📷 Seleziona Camera</h3>
+      <div id="cameraList"></div>
     </div>
   </div>
 
@@ -310,190 +116,143 @@
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
+    const VIEWER_ID = 'output'; // Different from regia's 'viewer'
     
     const cameras = new Map();
-    const slots = [null, null, null, null]; // slot -> camId
-    let activeSlot = null;
+    let currentCamId = null;
+    let currentPc = null;
+    let addedCandidates = new Set();
+    let unsubscribers = [];
     
-    // Listen for streams (same as regia)
+    // Listen for cameras
     DB.listen('streams', (data) => {
-      if (!data) {
-        cameras.clear();
-        updateCameraGrid();
-        return;
-      }
+      if (!data) { cameras.clear(); updateList(); return; }
       
       for (const [id, info] of Object.entries(data)) {
-        if (!cameras.has(id)) {
-          cameras.set(id, { info, pc: null, stream: null, unsubscribers: [], addedCandidates: new Set() });
-        } else {
-          cameras.get(id).info = info;
-        }
+        cameras.set(id, info);
       }
-      
       for (const id of cameras.keys()) {
-        if (!data[id]) {
-          cameras.delete(id);
-        }
+        if (!data[id]) cameras.delete(id);
       }
       
-      updateCameraGrid();
+      updateList();
+      
+      // Auto-select first if none
+      if (!currentCamId && cameras.size > 0) {
+        selectCamera(cameras.keys().next().value);
+      }
     });
     
-    function updateCameraGrid() {
-      const grid = document.getElementById('cameraGrid');
-      if (cameras.size === 0) {
-        grid.innerHTML = '<div style="grid-column:span 2;text-align:center;color:#666;padding:30px">Nessuna camera</div>';
-        return;
-      }
-      
-      grid.innerHTML = Array.from(cameras.entries()).map(([id, cam]) => `
-        <div class="cam-preview ${activeSlot !== null && slots[activeSlot] === id ? 'active' : ''}" data-cam="${id}" onclick="selectCamera('${id}')">
-          <video autoplay playsinline muted></video>
-          <div class="status ${cam.stream ? 'live' : ''}"></div>
-          <div class="label">${cam.info.name || 'Camera'}</div>
-        </div>
-      `).join('');
-      
-      // Update video elements
-      cameras.forEach((cam, id) => {
-        const el = grid.querySelector(`[data-cam="${id}"] video`);
-        if (el && cam.stream) el.srcObject = cam.stream;
-      });
+    function updateList() {
+      const list = document.getElementById('cameraList');
+      list.innerHTML = Array.from(cameras.entries()).map(([id, info]) => `
+        <button class="cam-btn ${id === currentCamId ? 'active' : ''}" onclick="selectCamera('${id}')">
+          <span class="status ${info.status === 'streaming' ? 'live' : ''}"></span>
+          ${info.name || 'Camera'}
+        </button>
+      `).join('') || '<p style="color:#666">Nessuna camera</p>';
     }
     
     window.selectCamera = async (camId) => {
-      const cam = cameras.get(camId);
-      if (!cam) return;
+      if (currentCamId === camId) return;
       
-      // If no stream, connect first
-      if (!cam.stream) {
-        await connectCamera(camId);
+      // Disconnect old
+      if (currentPc) {
+        unsubscribers.forEach(fn => fn?.());
+        unsubscribers = [];
+        currentPc.close();
+        currentPc = null;
       }
       
-      // Show in main output
-      const outputVideo = document.getElementById('outputVideo');
-      const noVideo = document.getElementById('noVideo');
+      currentCamId = camId;
+      addedCandidates = new Set();
+      updateList();
       
-      if (cam.stream) {
-        outputVideo.srcObject = cam.stream;
-        noVideo.style.display = 'none';
-      }
+      // Clear old signaling
+      try {
+        await DB.remove(`streams/${camId}/${VIEWER_ID}Offer`);
+        await DB.remove(`streams/${camId}/${VIEWER_ID}Candidates`);
+        await DB.remove(`streams/${camId}/${VIEWER_ID}Answer`);
+        await DB.remove(`streams/${camId}/${VIEWER_ID}CameraCandidates`);
+      } catch(e) {}
       
-      updateCameraGrid();
-    };
-    
-    async function connectCamera(camId) {
-      const cam = cameras.get(camId);
-      if (!cam || cam.pc) return;
+      await new Promise(r => setTimeout(r, 150));
       
-      // This output page is READ-ONLY - it watches the existing WebRTC streams
-      // It connects to cameras that are already streaming to the regia
-      
-      // Actually, we need to create our OWN connection since WebRTC is peer-to-peer
-      // We'll reuse the same signaling approach
-      
-      cam.addedCandidates = new Set();
-      
+      // Connect
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-      cam.pc = pc;
+      currentPc = pc;
       
       pc.ontrack = (e) => {
-        cam.stream = e.streams[0];
-        updateCameraGrid();
-        
-        // If this was selected, update main
-        const outputVideo = document.getElementById('outputVideo');
-        if (outputVideo.dataset.camId === camId) {
-          outputVideo.srcObject = cam.stream;
-        }
+        document.getElementById('video').srcObject = e.streams[0];
+        document.getElementById('noVideo').style.display = 'none';
+        console.log('Video received');
       };
       
       pc.onicecandidate = async (e) => {
         if (e.candidate && !e.candidate.candidate.includes('.local')) {
-          const id = `out_${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
-          await DB.set(`streams/${camId}/outputCandidates/${id}`, e.candidate.toJSON());
+          const id = `${Date.now()}_${Math.random().toString(36).substr(2,4)}`;
+          await DB.set(`streams/${camId}/${VIEWER_ID}Candidates/${id}`, e.candidate.toJSON());
         }
+      };
+      
+      pc.onconnectionstatechange = () => {
+        console.log('State:', pc.connectionState);
       };
       
       // Create offer
       pc.addTransceiver('video', { direction: 'recvonly' });
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      
-      await DB.set(`streams/${camId}/outputOffer`, { type: offer.type, sdp: offer.sdp });
+      await DB.set(`streams/${camId}/${VIEWER_ID}Offer`, { type: offer.type, sdp: offer.sdp });
       
       // Listen for answer
-      const unsubAnswer = DB.listen(`streams/${camId}/outputAnswer`, async (answer) => {
+      const unsubAnswer = DB.listen(`streams/${camId}/${VIEWER_ID}Answer`, async (answer) => {
         if (!answer || !pc || pc.signalingState === 'stable') return;
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
         
-        // Listen for candidates
-        DB.listen(`streams/${camId}/outputCameraCandidates`, async (cands) => {
+        // Listen for camera candidates
+        const unsubCands = DB.listen(`streams/${camId}/${VIEWER_ID}CameraCandidates`, async (cands) => {
           if (!cands || !pc) return;
           for (const [id, cand] of Object.entries(cands)) {
-            if (cam.addedCandidates.has(id)) continue;
+            if (addedCandidates.has(id)) continue;
             try {
               await pc.addIceCandidate(new RTCIceCandidate(cand));
-              cam.addedCandidates.add(id);
+              addedCandidates.add(id);
             } catch(e) {}
           }
         });
+        unsubscribers.push(unsubCands);
       });
-      cam.unsubscribers.push(unsubAnswer);
-    }
-    
-    // Source buttons
-    document.querySelectorAll('.source-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeSlot = parseInt(btn.dataset.slot);
-        
-        // Find camera assigned to this slot from regia
-        // For now, just select the Nth camera
-        const cams = Array.from(cameras.keys());
-        if (cams[activeSlot]) {
-          selectCamera(cams[activeSlot]);
-        }
-      });
-    });
-    
-    // Overlay toggles
-    window.toggleOverlay = (el) => {
-      el.classList.toggle('on');
-      const overlay = el.dataset.overlay;
-      
-      const elements = {
-        'logo': document.querySelector('.logo'),
-        'live': document.getElementById('liveBadge'),
-        'timer': document.getElementById('overlayTimer'),
-        'wod': document.getElementById('overlayWod')
-      };
-      
-      if (elements[overlay]) {
-        elements[overlay].style.display = el.classList.contains('on') ? '' : 'none';
-      }
+      unsubscribers.push(unsubAnswer);
     };
     
-    // Timer sync from Firebase
-    DB.listen('currentHeat', (heat) => {
-      if (!heat) return;
-      
-      const timerEl = document.getElementById('timerValue');
-      if (heat.status === 'countdown') {
-        timerEl.className = 'timer-value countdown';
-        timerEl.textContent = heat.countdown || '10';
-      } else if (heat.status === 'running') {
-        timerEl.className = 'timer-value running';
-        // Timer would be calculated from startTime
-      } else {
-        timerEl.className = 'timer-value stopped';
+    window.toggleSidebar = () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    };
+    
+    // Timer from Firebase
+    DB.listen('timer', (data) => {
+      if (!data) return;
+      const el = document.getElementById('timer');
+      if (data.status === 'countdown') {
+        el.className = 'timer countdown';
+        el.textContent = data.value || '10';
+      } else if (data.status === 'running' && data.startTime) {
+        el.className = 'timer';
+        const elapsed = Math.floor((Date.now() - data.startTime) / 1000);
+        const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const secs = (elapsed % 60).toString().padStart(2, '0');
+        el.textContent = `${mins}:${secs}`;
       }
     });
     
-    // Initialize
-    document.getElementById('noVideo').style.display = 'flex';
+    // WOD info
+    DB.listen('currentHeat', (heat) => {
+      if (!heat) return;
+      document.getElementById('heatInfo').textContent = `Heat ${heat.number || '?'} • ${heat.category || ''}`;
+      document.getElementById('wodName').textContent = heat.wodName || 'WOD';
+      document.getElementById('wodDesc').textContent = heat.wodDesc || '';
+    });
   </script>
 </body>
 </html>

@@ -488,8 +488,8 @@
       try {
         await DB.remove(`streams/${camId}/viewerOffer`);
         await DB.remove(`streams/${camId}/viewerCandidates`);
-        await DB.remove(`streams/${camId}/cameraAnswer`);
-        await DB.remove(`streams/${camId}/cameraCandidates`);
+        await DB.remove(`streams/${camId}/viewerAnswer`);
+        await DB.remove(`streams/${camId}/viewerCameraCandidates`);
       } catch(e) {}
       
       await new Promise(r => setTimeout(r, 200));
@@ -538,7 +538,7 @@
       // Listen for answer, then candidates
       let candidatesStarted = false;
       
-      const unsubAnswer = DB.listen(`streams/${camId}/cameraAnswer`, async (answer) => {
+      const unsubAnswer = DB.listen(`streams/${camId}/viewerAnswer`, async (answer) => {
         if (!answer || !pc || pc.signalingState === 'stable') return;
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -555,7 +555,7 @@
       cam.unsubscribers.push(unsubAnswer);
       
       function startCandidateListener() {
-        const unsubCands = DB.listen(`streams/${camId}/cameraCandidates`, async (cands) => {
+        const unsubCands = DB.listen(`streams/${camId}/viewerCameraCandidates`, async (cands) => {
           if (!cands || !pc) return;
           for (const [id, cand] of Object.entries(cands)) {
             if (cam.addedCandidates.has(id)) continue;
