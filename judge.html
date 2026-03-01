@@ -577,6 +577,32 @@
       });
     }
     
+    // Voice synthesis helper
+    function speak(text) {
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'it-IT';
+        utter.rate = 1.2;
+        speechSynthesis.speak(utter);
+      }
+    }
+    
+    // Beep sound
+    function beep(freq = 800, duration = 200) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.value = 0.3;
+        osc.start();
+        setTimeout(() => { osc.stop(); ctx.close(); }, duration);
+      } catch(e) {}
+    }
+    
     // Countdown before start
     function startCountdown(seconds) {
       document.getElementById('waitingOverlay').classList.add('hidden');
@@ -590,14 +616,26 @@
       document.getElementById('timerDisplay').textContent = count;
       document.getElementById('timerStatus').textContent = 'PRONTI!';
       
+      // Initial voice
+      speak('Pronti!');
+      
       const interval = setInterval(() => {
         count--;
         if (count > 0) {
           document.getElementById('timerDisplay').textContent = count;
+          // Voice countdown for last 5 seconds
+          if (count <= 5) {
+            speak(count.toString());
+            beep(600 + (5 - count) * 100, 150);
+          } else if (count === 10) {
+            speak('Dieci secondi');
+          }
         } else {
           clearInterval(interval);
           document.getElementById('timerStatus').textContent = 'GO!';
           document.getElementById('timerDisplay').textContent = 'GO!';
+          speak('Via!');
+          beep(1200, 500);
         }
       }, 1000);
     }

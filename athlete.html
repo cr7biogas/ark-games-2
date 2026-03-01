@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🏃 Atleta - ARK Games 2.0</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: #1a1a2e;
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #333;
+    }
+    .header h1 { font-size: 24px; margin-bottom: 5px; }
+    .header p { color: #888; font-size: 14px; }
+    
+    .content {
+      padding: 20px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .team-select {
+      margin-bottom: 30px;
+    }
+    .team-select label {
+      display: block;
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .team-select select {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #1a1a2e;
+      color: #fff;
+      font-size: 16px;
+    }
+    
+    .team-card {
+      background: linear-gradient(135deg, #1a1a2e, #252542);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .team-emoji { font-size: 80px; margin-bottom: 15px; }
+    .team-name { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .team-cat { color: #888; font-size: 14px; }
+    
+    .scores-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .score-card {
+      background: #1a1a2e;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .score-wod { font-size: 16px; font-weight: 600; }
+    .score-type { color: #888; font-size: 12px; }
+    .score-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #2ecc71;
+    }
+    .score-rank {
+      background: #e94560;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+    .no-score {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .total-card {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      border-radius: 16px;
+      padding: 25px;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .total-label { font-size: 14px; opacity: 0.8; }
+    .total-value { font-size: 48px; font-weight: 800; }
+    .total-rank { font-size: 18px; margin-top: 5px; }
+    
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏃 Vista Atleta</h1>
+    <p>Controlla i tuoi score</p>
+  </div>
+  
+  <div class="content">
+    <div class="team-select">
+      <label>Seleziona il tuo team</label>
+      <select id="teamSelect" onchange="selectTeam()">
+        <option value="">-- Scegli team --</option>
+      </select>
+    </div>
+    
+    <div id="teamInfo" style="display:none">
+      <div class="team-card">
+        <div class="team-emoji" id="teamEmoji">🐾</div>
+        <div class="team-name" id="teamName">Team</div>
+        <div class="team-cat" id="teamCat">Categoria</div>
+      </div>
+      
+      <div class="scores-title">📊 I tuoi Score</div>
+      <div id="scoresList">
+        <div class="empty">Nessuno score ancora</div>
+      </div>
+      
+      <div class="total-card" id="totalCard" style="display:none">
+        <div class="total-label">Posizione in classifica</div>
+        <div class="total-value" id="totalRank">-</div>
+        <div class="total-rank" id="totalPoints">0 punti</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    const compId = localStorage.getItem('ark2_compId');
+    if (!compId) location.href = 'index.html';
+    
+    let teams = {};
+    let workouts = {};
+    let scores = {};
+    let selectedTeamId = null;
+    
+    async function init() {
+      teams = await DB.get(`competitions/${compId}/teams`) || {};
+      workouts = await DB.get(`competitions/${compId}/workouts`) || {};
+      
+      const select = document.getElementById('teamSelect');
+      select.innerHTML = '<option value="">-- Scegli team --</option>' +
+        Object.entries(teams).map(([id, t]) => `
+          <option value="${id}">${t.emoji} ${t.name} (${t.category})</option>
+        `).join('');
+      
+      // Check if team was previously selected
+      const saved = localStorage.getItem('ark2_athleteTeam');
+      if (saved && teams[saved]) {
+        select.value = saved;
+        selectTeam();
+      }
+      
+      // Listen for score updates
+      DB.listen(`competitions/${compId}/scores`, (s) => {
+        scores = s || {};
+        if (selectedTeamId) renderScores();
+      });
+    }
+    
+    window.selectTeam = () => {
+      const id = document.getElementById('teamSelect').value;
+      if (!id) {
+        document.getElementById('teamInfo').style.display = 'none';
+        return;
+      }
+      
+      selectedTeamId = id;
+      localStorage.setItem('ark2_athleteTeam', id);
+      
+      const team = teams[id];
+      document.getElementById('teamEmoji').textContent = team.emoji;
+      document.getElementById('teamName').textContent = team.name;
+      document.getElementById('teamCat').textContent = team.category;
+      document.getElementById('teamInfo').style.display = 'block';
+      
+      renderScores();
+    };
+    
+    function renderScores() {
+      const team = teams[selectedTeamId];
+      const list = document.getElementById('scoresList');
+      
+      // Get workouts for this team's category
+      const teamWorkouts = Object.entries(workouts)
+        .filter(([id, w]) => !w.categories || w.categories.includes(team.category))
+        .map(([id, w]) => ({ id, ...w }));
+      
+      if (teamWorkouts.length === 0) {
+        list.innerHTML = '<div class="empty">Nessun WOD disponibile</div>';
+        return;
+      }
+      
+      list.innerHTML = teamWorkouts.map(wod => {
+        const scoreKey = `${selectedTeamId}_${wod.id}`;
+        const score = scores[scoreKey];
+        
+        let scoreDisplay = '<span class="no-score">Non completato</span>';
+        if (score) {
+          if (score.time) {
+            const m = Math.floor(score.time / 60);
+            const s = score.time % 60;
+            scoreDisplay = `<span class="score-value">${m}:${s.toString().padStart(2, '0')}</span>`;
+          } else if (score.reps) {
+            scoreDisplay = `<span class="score-value">${score.reps} reps</span>`;
+          }
+        }
+        
+        return `
+          <div class="score-card">
+            <div>
+              <div class="score-wod">${wod.name}</div>
+              <div class="score-type">${wod.type.toUpperCase()}</div>
+            </div>
+            <div>${scoreDisplay}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // Calculate overall ranking
+      // (simplified for now)
+      const totalCard = document.getElementById('totalCard');
+      totalCard.style.display = 'block';
+    }
+    
+    init();
+  </script>
+</body>
+</html>
