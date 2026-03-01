@@ -353,8 +353,24 @@
       <div class="tab-content" id="tab-availability">
         <div class="card">
           <h3>📅 Indica la tua Disponibilità</h3>
+          
+          <!-- Availability Status -->
+          <div id="availabilityStatus" style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:10px;padding:15px;margin-bottom:15px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span>📊 Disponibilità indicate:</span>
+              <strong id="availCount">0 / 0 minimo</strong>
+            </div>
+            <div style="margin-top:8px;background:rgba(0,0,0,0.2);border-radius:5px;height:8px;overflow:hidden;">
+              <div id="availProgress" style="height:100%;background:#e74c3c;transition:all 0.3s;width:0%;"></div>
+            </div>
+            <p id="availMessage" style="margin-top:8px;font-size:0.85rem;color:#e74c3c;">
+              ⚠️ Indica almeno X date per partecipare a tutti i WOD
+            </p>
+          </div>
+          
           <p style="color:#888;margin-bottom:15px;font-size:0.9rem;">
-            Clicca sui giorni in cui il tuo team può partecipare. I giorni evidenziati in arancione sono i giorni di gara.
+            Clicca sui giorni in cui il tuo team può partecipare. I giorni evidenziati in arancione sono i giorni di gara.<br>
+            <strong>ℹ️ Ogni evento include 2 WOD.</strong>
           </p>
           
           <div class="month-nav">
@@ -518,6 +534,7 @@
       renderCalendar();
       renderMySchedule();
       renderLeaderboard();
+      updateAvailabilityStatus();
     }
     
     function renderInfo() {
@@ -651,7 +668,41 @@
         availability.push(dateStr);
       }
       renderCalendar();
+      updateAvailabilityStatus();
     };
+    
+    function updateAvailabilityStatus() {
+      // Calculate minimum events needed (2 WOD per event)
+      const totalWods = wods.length;
+      const minEvents = Math.ceil(totalWods / 2);
+      const currentAvail = availability.length;
+      
+      // Update UI
+      const countEl = document.getElementById('availCount');
+      const progressEl = document.getElementById('availProgress');
+      const messageEl = document.getElementById('availMessage');
+      const statusEl = document.getElementById('availabilityStatus');
+      
+      countEl.textContent = `${currentAvail} / ${minEvents} minimo`;
+      
+      const percent = Math.min(100, (currentAvail / minEvents) * 100);
+      progressEl.style.width = percent + '%';
+      
+      if (currentAvail >= minEvents) {
+        progressEl.style.background = '#27ae60';
+        statusEl.style.background = 'rgba(39,174,96,0.1)';
+        statusEl.style.borderColor = 'rgba(39,174,96,0.3)';
+        messageEl.style.color = '#27ae60';
+        messageEl.textContent = `✅ Perfetto! Hai indicato abbastanza disponibilità per completare tutti i ${totalWods} WOD.`;
+      } else {
+        progressEl.style.background = '#e74c3c';
+        statusEl.style.background = 'rgba(231,76,60,0.1)';
+        statusEl.style.borderColor = 'rgba(231,76,60,0.3)';
+        messageEl.style.color = '#e74c3c';
+        const missing = minEvents - currentAvail;
+        messageEl.textContent = `⚠️ Indica almeno ${missing} ${missing === 1 ? 'altra data' : 'altre date'} per partecipare a tutti i ${totalWods} WOD (2 WOD per evento).`;
+      }
+    }
     
     window.changeMonth = (delta) => {
       currentCalendarMonth.setMonth(currentCalendarMonth.getMonth() + delta);
@@ -661,13 +712,30 @@
     window.saveAvailability = async () => {
       if (!myTeamId) return;
       
+      const totalWods = wods.length;
+      const minEvents = Math.ceil(totalWods / 2);
+      
+      if (availability.length < minEvents) {
+        const proceed = confirm(
+          `⚠️ Attenzione!\n\n` +
+          `Hai indicato solo ${availability.length} disponibilità, ma ne servono almeno ${minEvents} per completare tutti i ${totalWods} WOD.\n\n` +
+          `Vuoi salvare comunque? Potresti non riuscire a completare la season.`
+        );
+        if (!proceed) return;
+      }
+      
       await DB.update(`seasons/${seasonId}/teams/${myTeamId}`, {
         availability: availability,
         updatedAt: Date.now()
       });
       
       myTeam.availability = availability;
-      alert('✅ Disponibilità salvata!');
+      
+      if (availability.length >= minEvents) {
+        alert('✅ Disponibilità salvata!\n\nSei pronto per partecipare a tutti i WOD della season.');
+      } else {
+        alert('⚠️ Disponibilità salvata.\n\nRicorda di aggiungere altre date quando possibile!');
+      }
     };
     
     function renderMySchedule() {
@@ -686,15 +754,25 @@
       }
       
       container.innerHTML = myDates.map(([date, week]) => {
-        const wod = wods.find(w => w.id === week.wodId);
+        // Support both old (wodId) and new (wodIds) format
+        const eventWodIds = week.wodIds || [week.wodId];
+        const eventWods = eventWodIds.map(id => wods.find(w => w.id === id)).filter(Boolean);
+        
         return `
-          <div class="wod-item">
-            <div class="week" style="background:#f39c12;width:auto;padding:8px 12px;">
-              ${formatDate(date)}
+          <div class="wod-item" style="flex-direction:column;align-items:stretch;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div class="week" style="background:#f39c12;width:auto;padding:8px 12px;">
+                📅 ${formatDate(date)}
+              </div>
+              <span style="color:#888;font-size:0.85rem;">${week.status || 'Programmato'}</span>
             </div>
-            <div class="info">
-              <h4>${wod?.name || 'TBD'}</h4>
-              <p>${week.status || 'Programmato'}</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              ${eventWods.map(wod => `
+                <div style="flex:1;min-width:120px;background:rgba(0,0,0,0.2);border-radius:8px;padding:10px;">
+                  <div style="font-weight:600;">${wod?.name || 'TBD'}</div>
+                  <div style="color:#888;font-size:0.8rem;">${wod?.type || 'For Time'}</div>
+                </div>
+              `).join('')}
             </div>
           </div>
         `;

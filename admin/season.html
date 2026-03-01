@@ -778,14 +778,16 @@ Beginner</textarea>
       
       container.innerHTML = dates.map(date => {
         const week = schedule[date];
-        const wod = wods.find(w => w.id === week.wodId);
+        // Support both old (wodId) and new (wodIds) format
+        const eventWodIds = week.wodIds || [week.wodId];
+        const eventWods = eventWodIds.map(id => wods.find(w => w.id === id)).filter(Boolean);
         const categories = Object.keys(week.slots || {});
         
         return `
           <div class="schedule-week">
             <div class="header">
               <span class="date">📅 ${formatDate(date)}</span>
-              <span class="wod">🏋️ ${wod?.name || 'TBD'}</span>
+              <span class="wod">🏋️ ${eventWods.map(w => w?.name || 'TBD').join(' + ')}</span>
               <span class="status-badge status-${week.status || 'scheduled'}">${week.status || 'Programmato'}</span>
             </div>
             <div class="slots">
@@ -1129,21 +1131,26 @@ Beginner</textarea>
         current.setDate(current.getDate() + 1);
       }
       
-      // Create schedule
+      // Create schedule (2 WOD per event)
       schedule = {};
       const teamList = Object.entries(teams);
+      const wodsPerEvent = 2;
       
       dates.forEach((date, i) => {
-        const wodIndex = i % wods.length;
-        const wod = wods[wodIndex];
+        // Get 2 WODs for this event
+        const wodStartIndex = (i * wodsPerEvent) % wods.length;
+        const eventWods = [];
+        for (let w = 0; w < wodsPerEvent && eventWods.length < wods.length; w++) {
+          const wodIndex = (wodStartIndex + w) % wods.length;
+          eventWods.push(wods[wodIndex]);
+        }
         
         const slots = {};
         categories.forEach(cat => {
-          // Get teams in this category that are available and haven't done this WOD
+          // Get teams in this category that are available
           const available = teamList.filter(([id, t]) => 
             t.category === cat &&
-            (t.availability || []).includes(date) &&
-            !(t.completedWods || []).includes(wod.id)
+            (t.availability || []).includes(date)
           );
           
           // Take up to teamsPerSlot
@@ -1151,14 +1158,18 @@ Beginner</textarea>
         });
         
         schedule[date] = {
-          wodId: wod.id,
+          wodIds: eventWods.map(w => w.id), // Array of WOD IDs
+          wodId: eventWods[0]?.id, // Backward compat - primary WOD
           slots,
           status: 'scheduled'
         };
       });
       
+      // Calculate events needed
+      const eventsNeeded = Math.ceil(wods.length / wodsPerEvent);
+      
       renderSchedule();
-      alert(`✅ Calendario generato!\n${dates.length} settimane programmate`);
+      alert(`✅ Calendario generato!\n\n📅 ${dates.length} date disponibili\n🏋️ ${wods.length} WOD totali\n📌 ${eventsNeeded} eventi necessari (2 WOD/evento)`);
     };
     
     // Save functions
