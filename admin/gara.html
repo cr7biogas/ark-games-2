@@ -252,6 +252,8 @@
     <div class="tabs">
       <button class="tab active" data-tab="info">📋 Info</button>
       <button class="tab" data-tab="wod">🏋️ WOD</button>
+      <button class="tab" data-tab="iscrizioni">👥 Iscrizioni</button>
+      <button class="tab" data-tab="timeline">📅 Timeline</button>
       <button class="tab" data-tab="settings">⚙️ Impostazioni</button>
       <button class="tab" data-tab="share">🔗 Condividi</button>
       <button class="tab" data-tab="live" style="background:#e74c3c;color:white;">🎬 LIVE</button>
@@ -329,6 +331,43 @@ Scaled</textarea>
     </div>
     
     <!-- SETTINGS TAB -->
+    <!-- ISCRIZIONI TAB -->
+    <div class="tab-content" id="tab-iscrizioni">
+      <div class="section">
+        <h2>👥 Iscrizioni Ricevute</h2>
+        <div id="iscrizioniList" style="display:flex;flex-direction:column;gap:12px;">
+          <p style="color:#666;text-align:center;padding:30px;">Caricamento...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TIMELINE TAB -->
+    <div class="tab-content" id="tab-timeline">
+      <div class="section">
+        <h2>📅 Timeline Heat</h2>
+        <p style="color:#888;margin-bottom:20px;">Genera automaticamente lo schedule dei heat basato su WOD, categorie e lane.</p>
+        
+        <div class="form-row" style="margin-bottom:20px;">
+          <div class="form-group">
+            <label>Ora inizio primo heat</label>
+            <input type="time" id="timelineStart" value="09:00">
+          </div>
+          <div class="form-group">
+            <label>Pausa tra heat (min)</label>
+            <input type="number" id="timelinePause" value="3" min="1" max="15">
+          </div>
+        </div>
+        
+        <button onclick="generateTimeline()" style="width:100%;padding:16px;background:linear-gradient(135deg, #3498db, #2980b9);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;margin-bottom:25px;">
+          🔄 Genera Timeline
+        </button>
+        
+        <div id="timelinePreview" style="display:flex;flex-direction:column;gap:10px;">
+          <p style="color:#666;text-align:center;padding:20px;">Clicca "Genera Timeline" per creare lo schedule</p>
+        </div>
+      </div>
+    </div>
+    
     <div class="tab-content" id="tab-settings">
       <div class="section">
         <h2>⚙️ Configurazione</h2>
@@ -679,6 +718,117 @@ Scaled</textarea>
       navigator.clipboard.writeText(url);
       alert('✅ Link copiato!');
     };
+    
+    // Load iscrizioni
+    async function loadIscrizioni() {
+      if (!compId) return;
+      const registrations = await DB.get(`competitions/${compId}/registrations`) || {};
+      const list = document.getElementById('iscrizioniList');
+      
+      const regs = Object.entries(registrations);
+      if (regs.length === 0) {
+        list.innerHTML = '<p style="color:#666;text-align:center;padding:30px;">Nessuna iscrizione ricevuta</p>';
+        return;
+      }
+      
+      list.innerHTML = regs.map(([id, r]) => `
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.08);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong>${r.teamName || r.name || 'Atleta'}</strong>
+              <p style="color:#888;font-size:0.85rem;margin-top:4px;">
+                ${r.category || ''} · ${r.email || ''} · ${new Date(r.createdAt || 0).toLocaleDateString('it-IT')}
+              </p>
+            </div>
+            <span style="padding:6px 12px;border-radius:20px;font-size:0.75rem;background:${r.approved ? '#27ae60' : '#f39c12'};color:white;">
+              ${r.approved ? '✅ Approvato' : '⏳ In attesa'}
+            </span>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Generate timeline
+    window.generateTimeline = async () => {
+      if (!compId) { alert('Salva prima la gara'); return; }
+      
+      const lanes = parseInt(document.getElementById('compLanes')?.value || 4);
+      const cats = getCategories();
+      const startTime = document.getElementById('timelineStart').value || '09:00';
+      const pauseMin = parseInt(document.getElementById('timelinePause').value) || 3;
+      
+      if (wods.length === 0) {
+        alert('Aggiungi almeno un WOD prima di generare la timeline');
+        return;
+      }
+      
+      // Get teams/registrations
+      const registrations = await DB.get(`competitions/${compId}/registrations`) || {};
+      const teams = await DB.get(`competitions/${compId}/teams`) || {};
+      
+      // Generate heats: for each WOD, for each category, create heats
+      const timeline = [];
+      let currentTime = parseTime(startTime);
+      
+      for (const wod of wods) {
+        const wodCats = wod.categories || cats;
+        
+        for (const cat of wodCats) {
+          // Count athletes/teams in this category
+          const athletesInCat = Object.values(registrations).filter(r => r.category === cat).length +
+                               Object.values(teams).filter(t => t.category === cat).length;
+          
+          const numHeats = Math.max(1, Math.ceil(athletesInCat / lanes));
+          
+          for (let h = 0; h < numHeats; h++) {
+            timeline.push({
+              time: formatTime(currentTime),
+              wod: wod.name || 'WOD',
+              wodType: wod.type || 'fortime',
+              category: cat,
+              heat: h + 1,
+              lanes: lanes,
+              timeCap: parseInt(wod.timeCap) || 12
+            });
+            currentTime += (parseInt(wod.timeCap) || 12) + pauseMin;
+          }
+        }
+      }
+      
+      // Save timeline to Firebase
+      await DB.set(`competitions/${compId}/timeline`, timeline);
+      
+      // Show preview
+      const preview = document.getElementById('timelinePreview');
+      preview.innerHTML = timeline.map(h => `
+        <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #f39c12;">
+          <div>
+            <strong>${h.time}</strong>
+            <span style="color:#f39c12;margin-left:10px;">${h.wod}</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="background:rgba(52,152,219,0.2);padding:4px 10px;border-radius:12px;font-size:0.8rem;">${h.category}</span>
+            <span style="color:#888;margin-left:8px;">Heat ${h.heat}</span>
+          </div>
+        </div>
+      `).join('') || '<p style="color:#666;text-align:center;">Nessun heat generato</p>';
+      
+      alert('✅ Timeline generata e salvata!');
+    };
+    
+    function parseTime(str) {
+      const [h, m] = str.split(':').map(Number);
+      return h * 60 + m;
+    }
+    
+    function formatTime(mins) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+    }
+    
+    // Load iscrizioni when tab is clicked
+    document.querySelector('[data-tab="iscrizioni"]')?.addEventListener('click', loadIscrizioni);
   </script>
 </body>
 </html>
