@@ -510,20 +510,29 @@
       
       log(`Offer inviato a ${cam.info.name || camId}`);
       
-      // Listen for answer
+      // Listen for answer - start ICE candidate listener AFTER setRemoteDescription
+      let candidateListenerStarted = false;
+      
       const unsubAnswer = DB.listen(`streams/${camId}/cameraAnswer`, async (answer) => {
         if (!answer || !pc || pc.signalingState === 'stable') return;
         
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
           log(`Answer ricevuto da ${cam.info.name || camId}`, 'success');
+          
+          // NOW start listening for ICE candidates (after remote description is set)
+          if (!candidateListenerStarted) {
+            candidateListenerStarted = true;
+            startCandidateListener(camId, cam, pc);
+          }
         } catch (e) {
           log(`Errore answer: ${e.message}`, 'error');
         }
       });
       cam.unsubscribers.push(unsubAnswer);
-      
-      // Listen for camera's ICE candidates
+    }
+    
+    function startCandidateListener(camId, cam, pc) {
       const unsubCands = DB.listen(`streams/${camId}/cameraCandidates`, async (candidates) => {
         if (!candidates || !pc) return;
         
@@ -535,7 +544,7 @@
             await pc.addIceCandidate(new RTCIceCandidate(candidate));
             cam.addedCandidates.add(id);
           } catch (e) {
-            // May fail if remote description not set yet - that's ok
+            log(`ICE candidate error: ${e.message}`, 'error');
           }
         }
       });
