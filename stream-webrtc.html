@@ -515,6 +515,11 @@
       // ICE candidates
       pc.onicecandidate = async (e) => {
         if (e.candidate) {
+          // Skip mDNS .local addresses - mobile can't resolve them
+          if (e.candidate.candidate.includes('.local')) {
+            log('Skipped mDNS candidate');
+            return;
+          }
           const candId = `${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
           await DB.set(`streams/${camId}/viewerCandidates/${candId}`, e.candidate.toJSON());
         }
