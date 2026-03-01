@@ -476,7 +476,7 @@ Open</textarea>
     // Determine mode: competition or season
     const isSeasonMode = !!seasonId && !compId;
     const eventId = isSeasonMode ? seasonId : compId;
-    const basePath = isSeasonMode ? `seasons/${seasonId}` : `${basePath}`;
+    const basePath = isSeasonMode ? `seasons/${seasonId}` : `competitions/${compId}`;
     
     // For season mode, override compId to use eventId
     if (isSeasonMode) compId = seasonId;
