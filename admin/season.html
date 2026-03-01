@@ -294,6 +294,16 @@
             <input type="number" id="price" value="50" min="0">
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>🏆 Monte Premi (€)</label>
+            <input type="number" id="prizePool" value="0" min="0" placeholder="Es: 2000">
+          </div>
+          <div class="form-group">
+            <label>Dettaglio Premi</label>
+            <input type="text" id="prizeDetails" placeholder="Es: 1°€1000, 2°€600, 3°€400">
+          </div>
+        </div>
         <div class="form-group">
           <label>Categorie (una per riga)</label>
           <textarea id="categories" rows="3">RX
@@ -632,6 +642,8 @@ Beginner</textarea>
       document.getElementById('slotTime').value = season.slotTime || '10:00';
       document.getElementById('teamsPerSlot').value = season.teamsPerSlot || 6;
       document.getElementById('price').value = season.price || 50;
+      document.getElementById('prizePool').value = season.prizePool || 0;
+      document.getElementById('prizeDetails').value = season.prizeDetails || '';
       document.getElementById('categories').value = (season.categories || ['RX', 'Scaled']).join('\n');
       document.getElementById('description').value = season.description || '';
       document.getElementById('seasonStatus').value = season.status || 'draft';
@@ -1163,6 +1175,8 @@ Beginner</textarea>
         slotTime: document.getElementById('slotTime').value,
         teamsPerSlot: parseInt(document.getElementById('teamsPerSlot').value),
         price: parseFloat(document.getElementById('price').value),
+        prizePool: parseInt(document.getElementById('prizePool').value) || 0,
+        prizeDetails: document.getElementById('prizeDetails').value.trim(),
         categories: document.getElementById('categories').value.split('\n').filter(c => c.trim()),
         description: document.getElementById('description').value,
         status: document.getElementById('seasonStatus').value,

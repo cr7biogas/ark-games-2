@@ -144,7 +144,10 @@
   </div>
   
   <div class="cta-bar" id="ctaBar" style="display:none;">
-    <div class="price" id="price">€0</div>
+    <div>
+      <div class="price" id="price">€0</div>
+      <div id="prizePoolBadge" style="display:none;font-size:0.8rem;color:#f1c40f;">🏆 Monte premi: €0</div>
+    </div>
     <button class="cta-btn" id="ctaBtn" onclick="register()">ISCRIVITI →</button>
   </div>
 
@@ -251,6 +254,13 @@
       // CTA bar
       document.getElementById('ctaBar').style.display = 'flex';
       document.getElementById('price').innerHTML = `€${competition.price || 0} <span>/ atleta</span>`;
+      
+      // Show prize pool if available
+      if (competition.prizePool > 0) {
+        const prizeEl = document.getElementById('prizePoolBadge');
+        prizeEl.style.display = 'block';
+        prizeEl.textContent = `🏆 Monte premi: €${competition.prizePool}${competition.prizeDetails ? ' - ' + competition.prizeDetails : ''}`;
+      }
       
       const btn = document.getElementById('ctaBtn');
       if (!regOpen) {

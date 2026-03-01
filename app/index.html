@@ -279,6 +279,7 @@
               <span>👥 ${comp.athleteCount || 0} iscritti</span>
               <span>🏋️ ${comp.wodCount || 0} WOD</span>
               <span>💰 €${comp.price || 0}</span>
+              ${comp.prizePool > 0 ? `<span style="color:#f1c40f;">🏆 €${comp.prizePool}</span>` : ''}
             `}
           </div>
         </div>
@@ -368,6 +369,7 @@
             <span>👥 ${season.teamCount || 0} team</span>
             <span>🏋️ ${season.wodCount || 0} WOD</span>
             <span>💰 €${season.price || 0}</span>
+            ${season.prizePool > 0 ? `<span style="color:#f1c40f;">🏆 €${season.prizePool}</span>` : ''}
           </div>
         </div>
       `}).join('');

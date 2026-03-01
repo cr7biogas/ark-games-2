@@ -294,12 +294,23 @@
         
         <div class="form-row">
           <div class="form-group">
-            <label>Prezzo (€)</label>
+            <label>Prezzo Iscrizione (€)</label>
             <input type="number" id="compPrice" value="25" min="0">
           </div>
           <div class="form-group">
             <label>Max Atleti</label>
             <input type="number" id="compMax" value="60" min="1">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>🏆 Monte Premi (€)</label>
+            <input type="number" id="compPrizePool" value="0" min="0" placeholder="Es: 1000">
+          </div>
+          <div class="form-group">
+            <label>Dettaglio Premi</label>
+            <input type="text" id="compPrizeDetails" placeholder="Es: 1°€500, 2°€300, 3°€200">
           </div>
         </div>
         
@@ -629,6 +640,8 @@ Scaled</textarea>
       document.getElementById('compDate').value = competition.date || '';
       document.getElementById('compTime').value = competition.time || '09:00';
       document.getElementById('compPrice').value = competition.price || 25;
+      document.getElementById('compPrizePool').value = competition.prizePool || 0;
+      document.getElementById('compPrizeDetails').value = competition.prizeDetails || '';
       document.getElementById('compMax').value = competition.maxAthletes || 60;
       document.getElementById('compLocation').value = competition.location || '';
       document.getElementById('compCategories').value = (competition.categories || ['RX', 'Scaled']).join('\n');
@@ -880,6 +893,8 @@ Scaled</textarea>
         date: document.getElementById('compDate').value,
         time: document.getElementById('compTime').value,
         price: parseInt(document.getElementById('compPrice').value) || 0,
+        prizePool: parseInt(document.getElementById('compPrizePool').value) || 0,
+        prizeDetails: document.getElementById('compPrizeDetails').value.trim(),
         maxAthletes: parseInt(document.getElementById('compMax').value) || 60,
         location: document.getElementById('compLocation').value.trim(),
         categories: document.getElementById('compCategories').value.split('\n').map(c => c.trim()).filter(c => c),
