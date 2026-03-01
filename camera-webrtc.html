@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>📷 ARK Camera WebRTC</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, sans-serif;
+      background: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    video {
+      flex: 1;
+      width: 100%;
+      object-fit: cover;
+    }
+    
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 15px;
+      background: linear-gradient(rgba(0,0,0,0.8), transparent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot.offline { background: #e74c3c; }
+    .dot.connecting { background: #f1c40f; animation: blink 1s infinite; }
+    .dot.online { background: #2ecc71; }
+    @keyframes blink { 50% { opacity: 0.3; } }
+    
+    .cam-name {
+      background: #e94560;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    .bottom-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.95));
+      padding: 40px 20px 20px;
+    }
+    
+    .info {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .info .label { font-size: 11px; color: #888; margin-bottom: 5px; }
+    .info .value { font-size: 24px; font-weight: 700; color: #2ecc71; }
+    .info .sub { font-size: 12px; color: #666; margin-top: 5px; }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .btn {
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: #e94560; color: white; }
+    .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
+    
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 15px;
+      font-size: 11px;
+      color: #666;
+    }
+    .stats span { color: #fff; }
+    
+    /* Setup screen */
+    .setup {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      z-index: 100;
+    }
+    .setup.hidden { display: none; }
+    .setup .logo { font-size: 70px; margin-bottom: 15px; }
+    .setup h1 { font-size: 26px; margin-bottom: 8px; }
+    .setup p { color: #888; font-size: 14px; margin-bottom: 30px; text-align: center; }
+    .setup input {
+      width: 100%;
+      max-width: 280px;
+      padding: 15px;
+      border-radius: 12px;
+      border: 2px solid #333;
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .setup input:focus { outline: none; border-color: #e94560; }
+    .setup .btn { width: 100%; max-width: 280px; }
+    .setup .error {
+      background: rgba(231,76,60,0.2);
+      color: #e74c3c;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      max-width: 280px;
+    }
+    .setup .error.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Setup -->
+  <div class="setup" id="setup">
+    <div class="logo">📷</div>
+    <h1>ARK Camera</h1>
+    <p>Connetti questo telefono come camera WebRTC</p>
+    
+    <div class="error hidden" id="error"></div>
+    
+    <input type="text" id="camName" placeholder="Nome camera (es: Lane 1)">
+    
+    <select id="quality" style="width:100%;max-width:280px;padding:15px;border-radius:12px;border:2px solid #333;background:rgba(255,255,255,0.05);color:white;font-size:16px;margin-bottom:15px">
+      <option value="720">720p (HD)</option>
+      <option value="480">480p (SD)</option>
+      <option value="360">360p (Low)</option>
+    </select>
+    
+    <button class="btn btn-primary" onclick="start()">📹 Avvia Camera</button>
+  </div>
+  
+  <!-- Camera View -->
+  <div class="container">
+    <video id="video" autoplay playsinline muted></video>
+    
+    <div class="overlay">
+      <div class="status">
+        <div class="dot offline" id="dot"></div>
+        <span id="statusText">Offline</span>
+      </div>
+      <div class="cam-name" id="nameLabel">Camera</div>
+    </div>
+    
+    <div class="bottom-panel">
+      <div class="info">
+        <div class="label">CAMERA ID</div>
+        <div class="value" id="camId">---</div>
+        <div class="sub" id="connInfo">In attesa di connessione dalla Regia...</div>
+      </div>
+      
+      <div class="controls">
+        <button class="btn btn-secondary" onclick="switchCam()">🔄 Flip</button>
+        <button class="btn btn-secondary" onclick="toggleFlash()">💡 Flash</button>
+        <button class="btn btn-primary" onclick="stop()">⏹️ Stop</button>
+      </div>
+      
+      <div class="stats">
+        Bitrate: <span id="bitrate">0 kbps</span> |
+        FPS: <span id="fps">0</span> |
+        Viewers: <span id="viewers">0</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    // === CONFIG ===
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+    
+    // === STATE ===
+    let camId = null;
+    let stream = null;
+    let peerConnection = null;
+    let facingMode = 'environment';
+    let unsubscribers = [];
+    
+    // === HELPERS ===
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = '❌ ' + msg;
+      el.classList.remove('hidden');
+    }
+    
+    function setStatus(status, text) {
+      const dot = document.getElementById('dot');
+      const txt = document.getElementById('statusText');
+      dot.className = 'dot ' + status;
+      txt.textContent = text;
+    }
+    
+    // === MAIN ===
+    window.start = async () => {
+      const name = document.getElementById('camName').value.trim() || 'Camera';
+      const quality = document.getElementById('quality').value;
+      
+      const resolutions = {
+        '720': { width: 1280, height: 720 },
+        '480': { width: 854, height: 480 },
+        '360': { width: 640, height: 360 }
+      };
+      const res = resolutions[quality];
+      
+      try {
+        // Get camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode,
+            width: { ideal: res.width },
+            height: { ideal: res.height },
+            frameRate: { ideal: 30 }
+          },
+          audio: false
+        });
+        
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('setup').classList.add('hidden');
+        document.getElementById('nameLabel').textContent = name;
+        
+        // Keep screen on
+        if ('wakeLock' in navigator) {
+          try { await navigator.wakeLock.request('screen'); } catch(e) {}
+        }
+        
+        // Generate camera ID
+        camId = 'cam_' + Math.random().toString(36).substr(2, 8);
+        document.getElementById('camId').textContent = camId;
+        
+        // Register in Firebase
+        await DB.set(`streams/${camId}`, {
+          name,
+          quality,
+          status: 'waiting',
+          createdAt: Date.now()
+        });
+        
+        setStatus('connecting', 'In attesa...');
+        
+        // Listen for answer from viewer (regia)
+        listenForConnection();
+        
+      } catch (e) {
+        showError(e.message || 'Errore accesso camera');
+      }
+    };
+    
+    async function listenForConnection() {
+      // When regia sends an answer, create peer connection
+      const unsub = DB.listen(`streams/${camId}/viewerOffer`, async (offer) => {
+        if (!offer) return;
+        
+        setStatus('connecting', 'Connessione...');
+        document.getElementById('connInfo').textContent = 'Regia connessa!';
+        
+        await createPeerConnection(offer);
+      });
+      unsubscribers.push(unsub);
+    }
+    
+    async function createPeerConnection(viewerOffer) {
+      // Close existing connection
+      if (peerConnection) {
+        peerConnection.close();
+      }
+      
+      peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      
+      // Add local stream
+      stream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, stream);
+      });
+      
+      // Handle ICE candidates
+      peerConnection.onicecandidate = async (e) => {
+        if (e.candidate) {
+          const candId = Date.now().toString();
+          await DB.set(`streams/${camId}/cameraCandidates/${candId}`, e.candidate.toJSON());
+        }
+      };
+      
+      // Connection state
+      peerConnection.onconnectionstatechange = () => {
+        const state = peerConnection.connectionState;
+        if (state === 'connected') {
+          setStatus('online', 'Live');
+          DB.update(`streams/${camId}`, { status: 'streaming' });
+          startStatsMonitor();
+        } else if (state === 'disconnected' || state === 'failed') {
+          setStatus('offline', 'Disconnesso');
+          DB.update(`streams/${camId}`, { status: 'disconnected' });
+        }
+      };
+      
+      // Set remote description (viewer's offer)
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(viewerOffer));
+      
+      // Create answer
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      
+      // Send answer to Firebase
+      await DB.set(`streams/${camId}/cameraAnswer`, {
+        type: answer.type,
+        sdp: answer.sdp
+      });
+      
+      // Listen for viewer's ICE candidates
+      const unsub = DB.listen(`streams/${camId}/viewerCandidates`, async (candidates) => {
+        if (!candidates) return;
+        for (const [id, candidate] of Object.entries(candidates)) {
+          try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (e) {}
+        }
+      });
+      unsubscribers.push(unsub);
+    }
+    
+    function startStatsMonitor() {
+      setInterval(async () => {
+        if (!peerConnection) return;
+        
+        const stats = await peerConnection.getStats();
+        stats.forEach(report => {
+          if (report.type === 'outbound-rtp' && report.kind === 'video') {
+            const bitrate = Math.round((report.bytesSent * 8) / 1000);
+            document.getElementById('bitrate').textContent = bitrate + ' kbps';
+            document.getElementById('fps').textContent = report.framesPerSecond || '?';
+          }
+        });
+      }, 2000);
+    }
+    
+    window.switchCam = async () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      
+      const oldStream = stream;
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      
+      document.getElementById('video').srcObject = stream;
+      
+      // Replace track in peer connection
+      if (peerConnection) {
+        const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) {
+          sender.replaceTrack(stream.getVideoTracks()[0]);
+        }
+      }
+      
+      oldStream.getTracks().forEach(t => t.stop());
+    };
+    
+    window.toggleFlash = async () => {
+      const track = stream?.getVideoTracks()[0];
+      try {
+        const caps = track?.getCapabilities?.();
+        if (caps?.torch) {
+          const settings = track.getSettings();
+          await track.applyConstraints({ advanced: [{ torch: !settings.torch }] });
+        } else {
+          alert('Flash non disponibile');
+        }
+      } catch (e) {}
+    };
+    
+    window.stop = async () => {
+      // Cleanup
+      unsubscribers.forEach(fn => fn?.());
+      if (peerConnection) peerConnection.close();
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (camId) await DB.remove(`streams/${camId}`);
+      
+      location.reload();
+    };
+    
+    // Cleanup on close
+    window.addEventListener('beforeunload', () => {
+      if (camId) DB.remove(`streams/${camId}`);
+    });
+  </script>
+</body>
+</html>

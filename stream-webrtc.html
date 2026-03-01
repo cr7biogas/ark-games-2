@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🎬 Regia WebRTC - ARK Games</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #1a1a24;
+      --accent: #e94560;
+      --success: #2ecc71;
+      --border: #2a2a3a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, sans-serif; background: var(--bg); color: #fff; height: 100vh; overflow: hidden; }
+    
+    .header {
+      background: #12121a;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 { font-size: 18px; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #888; }
+    .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .header .actions { margin-left: auto; display: flex; gap: 10px; }
+    .btn { padding: 10px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: var(--card); color: white; }
+    
+    .main { display: grid; grid-template-columns: 1fr 280px; height: calc(100vh - 56px); }
+    
+    .preview-area { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+    
+    .main-preview {
+      flex: 1;
+      background: #000;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .main-preview video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .main-preview .no-feed {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .main-preview .no-feed .icon { font-size: 48px; }
+    
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .slot {
+      aspect-ratio: 16/9;
+      background: var(--card);
+      border-radius: 8px;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      border: 2px solid transparent;
+    }
+    .slot:hover { border-color: var(--border); }
+    .slot.active { border-color: var(--accent); }
+    .slot video { width: 100%; height: 100%; object-fit: cover; }
+    .slot .label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 6px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      font-size: 11px;
+    }
+    .slot .indicator {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #666;
+    }
+    .slot .indicator.live { background: var(--success); }
+    .slot .indicator.connecting { background: #f1c40f; }
+    
+    .sidebar {
+      background: #12121a;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-section {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 12px;
+    }
+    
+    .camera-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .cam-item {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cam-item .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .cam-item .dot.waiting { background: #f1c40f; }
+    .cam-item .dot.streaming { background: var(--success); }
+    .cam-item .dot.disconnected { background: #e74c3c; }
+    .cam-item .info { flex: 1; }
+    .cam-item .name { font-size: 13px; font-weight: 600; }
+    .cam-item .id { font-size: 10px; color: #888; }
+    .cam-item select {
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: white;
+      font-size: 11px;
+    }
+    
+    .empty { text-align: center; color: #666; padding: 30px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎬 Regia WebRTC</h1>
+    <div class="status">
+      <div class="dot"></div>
+      <span id="statusText">In ascolto...</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="refreshCameras()">🔄 Refresh</button>
+      <button class="btn btn-primary" onclick="toggleFullscreen()">⛶</button>
+    </div>
+  </div>
+  
+  <div class="main">
+    <div class="preview-area">
+      <div class="main-preview" id="mainPreview">
+        <video id="mainVideo" autoplay playsinline muted></video>
+        <div class="no-feed" id="noFeed">
+          <div class="icon">📹</div>
+          <p>Seleziona una camera</p>
+        </div>
+      </div>
+      
+      <div class="grid" id="slotGrid">
+        <div class="slot" data-slot="0" onclick="selectSlot(0)">
+          <video autoplay playsinline muted></video>
+          <div class="indicator"></div>
+          <div class="label">Lane 1</div>
+        </div>
+        <div class="slot" data-slot="1" onclick="selectSlot(1)">
+          <video autoplay playsinline muted></video>
+          <div class="indicator"></div>
+          <div class="label">Lane 2</div>
+        </div>
+        <div class="slot" data-slot="2" onclick="selectSlot(2)">
+          <video autoplay playsinline muted></video>
+          <div class="indicator"></div>
+          <div class="label">Lane 3</div>
+        </div>
+        <div class="slot" data-slot="3" onclick="selectSlot(3)">
+          <video autoplay playsinline muted></video>
+          <div class="indicator"></div>
+          <div class="label">Overview</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <h3>📷 Camere Disponibili</h3>
+      </div>
+      <div class="camera-list" id="cameraList">
+        <div class="empty">In attesa di camere...<br><br>Apri <b>camera-webrtc.html</b> sui telefoni</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ];
+    
+    // State
+    const cameras = new Map(); // camId -> { info, peerConnection, stream }
+    const slots = [null, null, null, null]; // slot -> camId
+    let activeSlot = null;
+    
+    // Listen for cameras
+    DB.listen('streams', (data) => {
+      if (!data) {
+        document.getElementById('cameraList').innerHTML = '<div class="empty">Nessuna camera online</div>';
+        return;
+      }
+      
+      // Update camera list
+      for (const [camId, info] of Object.entries(data)) {
+        if (!cameras.has(camId)) {
+          cameras.set(camId, { info, peerConnection: null, stream: null });
+        } else {
+          cameras.get(camId).info = info;
+        }
+      }
+      
+      // Remove disconnected cameras
+      for (const camId of cameras.keys()) {
+        if (!data[camId]) {
+          const cam = cameras.get(camId);
+          if (cam.peerConnection) cam.peerConnection.close();
+          cameras.delete(camId);
+          
+          // Remove from slot
+          const slotIdx = slots.indexOf(camId);
+          if (slotIdx >= 0) {
+            slots[slotIdx] = null;
+            updateSlot(slotIdx);
+          }
+        }
+      }
+      
+      renderCameraList();
+      document.getElementById('statusText').textContent = `${cameras.size} camere`;
+    });
+    
+    function renderCameraList() {
+      const list = document.getElementById('cameraList');
+      
+      if (cameras.size === 0) {
+        list.innerHTML = '<div class="empty">Nessuna camera online</div>';
+        return;
+      }
+      
+      list.innerHTML = Array.from(cameras.entries()).map(([camId, cam]) => {
+        const status = cam.info.status || 'waiting';
+        const assignedSlot = slots.indexOf(camId);
+        
+        return `
+          <div class="cam-item">
+            <div class="dot ${status}"></div>
+            <div class="info">
+              <div class="name">${cam.info.name || 'Camera'}</div>
+              <div class="id">${camId}</div>
+            </div>
+            <select onchange="assignCamera('${camId}', this.value)">
+              <option value="">--</option>
+              <option value="0" ${assignedSlot===0?'selected':''}>Lane 1</option>
+              <option value="1" ${assignedSlot===1?'selected':''}>Lane 2</option>
+              <option value="2" ${assignedSlot===2?'selected':''}>Lane 3</option>
+              <option value="3" ${assignedSlot===3?'selected':''}>Overview</option>
+            </select>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    window.assignCamera = async (camId, slotStr) => {
+      const slotIdx = slotStr === '' ? -1 : parseInt(slotStr);
+      
+      // Remove from previous slot
+      const prevSlot = slots.indexOf(camId);
+      if (prevSlot >= 0) {
+        slots[prevSlot] = null;
+        updateSlot(prevSlot);
+      }
+      
+      if (slotIdx < 0) {
+        // Just unassign
+        const cam = cameras.get(camId);
+        if (cam?.peerConnection) {
+          cam.peerConnection.close();
+          cam.peerConnection = null;
+          cam.stream = null;
+        }
+        renderCameraList();
+        return;
+      }
+      
+      // Remove previous camera from this slot
+      if (slots[slotIdx]) {
+        const oldCam = cameras.get(slots[slotIdx]);
+        if (oldCam?.peerConnection) {
+          oldCam.peerConnection.close();
+          oldCam.peerConnection = null;
+        }
+      }
+      
+      slots[slotIdx] = camId;
+      updateSlot(slotIdx);
+      
+      // Connect via WebRTC
+      await connectToCamera(camId, slotIdx);
+      
+      renderCameraList();
+    };
+    
+    async function connectToCamera(camId, slotIdx) {
+      const cam = cameras.get(camId);
+      if (!cam) return;
+      
+      const slot = document.querySelector(`[data-slot="${slotIdx}"]`);
+      const indicator = slot.querySelector('.indicator');
+      indicator.className = 'indicator connecting';
+      
+      // Create peer connection
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      cam.peerConnection = pc;
+      
+      // Handle incoming stream
+      pc.ontrack = (e) => {
+        cam.stream = e.streams[0];
+        const video = slot.querySelector('video');
+        video.srcObject = e.streams[0];
+        indicator.className = 'indicator live';
+        
+        // If this is active slot, show in main
+        if (activeSlot === slotIdx) {
+          document.getElementById('mainVideo').srcObject = e.streams[0];
+        }
+      };
+      
+      // ICE candidates
+      pc.onicecandidate = async (e) => {
+        if (e.candidate) {
+          const candId = Date.now().toString();
+          await DB.set(`streams/${camId}/viewerCandidates/${candId}`, e.candidate.toJSON());
+        }
+      };
+      
+      // Connection state
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+          indicator.className = 'indicator';
+        }
+      };
+      
+      // Create offer
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      
+      // Send offer to camera
+      await DB.set(`streams/${camId}/viewerOffer`, {
+        type: offer.type,
+        sdp: offer.sdp
+      });
+      
+      // Listen for answer
+      const unsubAnswer = DB.listen(`streams/${camId}/cameraAnswer`, async (answer) => {
+        if (!answer) return;
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (e) {}
+      });
+      
+      // Listen for camera's ICE candidates
+      const unsubCands = DB.listen(`streams/${camId}/cameraCandidates`, async (candidates) => {
+        if (!candidates) return;
+        for (const [id, candidate] of Object.entries(candidates)) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (e) {}
+        }
+      });
+    }
+    
+    function updateSlot(slotIdx) {
+      const slot = document.querySelector(`[data-slot="${slotIdx}"]`);
+      const video = slot.querySelector('video');
+      const indicator = slot.querySelector('.indicator');
+      
+      const camId = slots[slotIdx];
+      if (!camId) {
+        video.srcObject = null;
+        indicator.className = 'indicator';
+        return;
+      }
+      
+      const cam = cameras.get(camId);
+      if (cam?.stream) {
+        video.srcObject = cam.stream;
+        indicator.className = 'indicator live';
+      }
+    }
+    
+    window.selectSlot = (idx) => {
+      document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
+      document.querySelector(`[data-slot="${idx}"]`).classList.add('active');
+      
+      activeSlot = idx;
+      const camId = slots[idx];
+      const noFeed = document.getElementById('noFeed');
+      const mainVideo = document.getElementById('mainVideo');
+      
+      if (camId && cameras.get(camId)?.stream) {
+        noFeed.style.display = 'none';
+        mainVideo.srcObject = cameras.get(camId).stream;
+      } else {
+        noFeed.style.display = 'flex';
+        mainVideo.srcObject = null;
+      }
+    };
+    
+    window.refreshCameras = () => location.reload();
+    window.toggleFullscreen = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    };
+  </script>
+</body>
+</html>
