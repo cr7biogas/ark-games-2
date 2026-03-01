@@ -262,11 +262,19 @@
   <script type="module">
     import { DB } from '../firebase-config.js';
     
-    // Get compId from URL param or localStorage
+    // Get compId or seasonId from URL param
     const urlParams = new URLSearchParams(location.search);
     const compId = urlParams.get('c') || localStorage.getItem('ark2_compId');
-    if (compId) localStorage.setItem('ark2_compId', compId); // sync
-    if (!compId) location.href = 'index.html';
+    const seasonId = urlParams.get('s') || localStorage.getItem('ark2_seasonId');
+    
+    // Determine mode: competition or season
+    const isSeasonMode = !!seasonId && !compId;
+    const basePath = isSeasonMode ? `seasons/${seasonId}` : `${basePath}`;
+    
+    if (compId) localStorage.setItem('ark2_compId', compId);
+    if (seasonId) localStorage.setItem('ark2_seasonId', seasonId);
+    
+    if (!compId && !seasonId) location.href = 'index.html';
     
     let competition = null;
     let categories = [];
@@ -282,15 +290,15 @@
     }, 1000);
     
     async function init() {
-      competition = await DB.get(`competitions/${compId}`);
+      competition = await DB.get(`${basePath}`);
       if (!competition) return;
       
       document.getElementById('compName').textContent = competition.name || 'ARK Games';
       categories = competition.categories || ['Experience', 'Scaled', 'Open'];
       currentCategory = categories[0];
       
-      teams = await DB.get(`competitions/${compId}/teams`) || {};
-      workouts = await DB.get(`competitions/${compId}/workouts`) || {};
+      teams = await DB.get(`${basePath}/teams`) || {};
+      workouts = await DB.get(`${basePath}/workouts`) || {};
       
       renderCatTabs();
       loadScores();
@@ -324,7 +332,7 @@
     };
     
     function loadScores() {
-      DB.listen(`competitions/${compId}/scores`, (s) => {
+      DB.listen(`${basePath}/scores`, (s) => {
         scores = s || {};
         renderLeaderboard();
       });
@@ -373,7 +381,7 @@
     }
     
     function listenForHeat() {
-      DB.listen(`competitions/${compId}/currentHeat`, (heat) => {
+      DB.listen(`${basePath}/currentHeat`, (heat) => {
         const container = document.getElementById('timerContent');
         
         if (!heat || heat.status === 'pending') {

@@ -556,14 +556,26 @@
   <script type="module">
     import { DB } from './firebase-config.js';
     
-    // Get compId from URL param or localStorage
+    // Get compId or seasonId from URL param
     const urlParams = new URLSearchParams(location.search);
     const compId = urlParams.get('c') || localStorage.getItem('ark2_compId');
-    if (compId) localStorage.setItem('ark2_compId', compId); // sync
-    if (!compId) {
-      alert('Seleziona prima una gara!');
+    const seasonId = urlParams.get('s') || localStorage.getItem('ark2_seasonId');
+    
+    // Determine mode: competition or season
+    const isSeasonMode = !!seasonId && !compId;
+    const eventId = isSeasonMode ? seasonId : compId;
+    const basePath = isSeasonMode ? `seasons/${seasonId}` : `competitions/${compId}`;
+    
+    // Sync to localStorage
+    if (compId) localStorage.setItem('ark2_compId', compId);
+    if (seasonId) localStorage.setItem('ark2_seasonId', seasonId);
+    
+    if (!eventId) {
+      alert('Seleziona prima una gara o season!');
       location.href = 'index.html';
     }
+    
+    console.log(`Judge mode: ${isSeasonMode ? 'SEASON' : 'COMPETITION'}, ID: ${eventId}`);
     
     let judgeId = null;
     let judgeName = '';
@@ -585,7 +597,7 @@
     
     // Load PIN from competition config
     async function loadJudgeConfig() {
-      const config = await DB.get(`competitions/${compId}/judgeConfig`);
+      const config = await DB.get(`${basePath}/judgeConfig`);
       if (config?.pin) {
         correctPin = config.pin;
       }
@@ -664,7 +676,7 @@
     
     // Load WODs
     async function loadWods() {
-      const wods = await DB.get(`competitions/${compId}/workouts`);
+      const wods = await DB.get(`${basePath}/workouts`);
       const list = document.getElementById('wodList');
       
       if (!wods || Object.keys(wods).length === 0) {
@@ -685,7 +697,7 @@
     
     // Select WOD
     window.selectWod = async (wodId, wodName) => {
-      selectedWod = { id: wodId, ...(await DB.get(`competitions/${compId}/workouts/${wodId}`)) };
+      selectedWod = { id: wodId, ...(await DB.get(`${basePath}/workouts/${wodId}`)) };
       document.getElementById('selectedWodName').textContent = wodName;
       goToScreen('screen-team');
       loadTeams();
@@ -693,8 +705,8 @@
     
     // Load teams (only those without score for this WOD)
     async function loadTeams() {
-      allTeams = await DB.get(`competitions/${compId}/teams`) || {};
-      allScores = await DB.get(`competitions/${compId}/scores`) || {};
+      allTeams = await DB.get(`${basePath}/teams`) || {};
+      allScores = await DB.get(`${basePath}/scores`) || {};
       
       const list = document.getElementById('teamList');
       
@@ -762,7 +774,7 @@
     // Confirm presence and mark ready
     window.confirmPresence = async () => {
       // Register as judge
-      await DB.set(`competitions/${compId}/judges/${judgeId}`, {
+      await DB.set(`${basePath}/judges/${judgeId}`, {
         name: 'Giudice ' + judgeId.substr(-4),
         wodId: selectedWod.id,
         teamId: selectedTeam.id,
@@ -786,18 +798,18 @@
       if (isReady) {
         btn.textContent = '✅ PRONTO';
         btn.classList.remove('not-ready');
-        await DB.update(`competitions/${compId}/judges/${judgeId}`, { status: 'ready' });
+        await DB.update(`${basePath}/judges/${judgeId}`, { status: 'ready' });
       } else {
         btn.textContent = '❌ NON PRONTO';
         btn.classList.add('not-ready');
-        await DB.update(`competitions/${compId}/judges/${judgeId}`, { status: 'waiting' });
+        await DB.update(`${basePath}/judges/${judgeId}`, { status: 'waiting' });
       }
     };
     
     // Listen for heat start
     function listenForStart() {
       // Listen for judge count
-      DB.listen(`competitions/${compId}/judges`, (judges) => {
+      DB.listen(`${basePath}/judges`, (judges) => {
         if (!judges) return;
         const total = Object.keys(judges).length;
         const ready = Object.values(judges).filter(j => j.status === 'ready' && j.present).length;
@@ -805,7 +817,7 @@
       });
       
       // Listen for heat status
-      DB.listen(`competitions/${compId}/currentHeat`, (heat) => {
+      DB.listen(`${basePath}/currentHeat`, (heat) => {
         if (heat && heat.status === 'countdown') {
           startCountdown(heat.countdownFrom || 10);
         } else if (heat && heat.status === 'running') {
@@ -967,7 +979,7 @@
       updateCurrentMovement();
       
       // Sync to Firebase
-      await DB.update(`competitions/${compId}/judges/${judgeId}`, {
+      await DB.update(`${basePath}/judges/${judgeId}`, {
         reps: reps,
         noReps: noReps,
         lastUpdate: Date.now()
@@ -986,7 +998,7 @@
       noReps++;
       beep(300, 150);
       
-      await DB.update(`competitions/${compId}/judges/${judgeId}`, {
+      await DB.update(`${basePath}/judges/${judgeId}`, {
         reps: reps,
         noReps: noReps,
         lastUpdate: Date.now()
@@ -1001,7 +1013,7 @@
         updateMovementsList();
         updateCurrentMovement();
         
-        await DB.update(`competitions/${compId}/judges/${judgeId}`, {
+        await DB.update(`${basePath}/judges/${judgeId}`, {
           reps: reps,
           lastUpdate: Date.now()
         });
@@ -1067,8 +1079,8 @@
       const scoreKey = `${selectedTeam.id}_${selectedWod.id}`;
       
       // Check if score already exists and is locked
-      const config = await DB.get(`competitions/${compId}/judgeConfig`);
-      const existingScore = await DB.get(`competitions/${compId}/scores/${scoreKey}`);
+      const config = await DB.get(`${basePath}/judgeConfig`);
+      const existingScore = await DB.get(`${basePath}/scores/${scoreKey}`);
       
       if (existingScore && config?.lockScores) {
         const override = confirm(
@@ -1079,7 +1091,7 @@
         if (!override) return;
       }
       
-      await DB.set(`competitions/${compId}/scores/${scoreKey}`, {
+      await DB.set(`${basePath}/scores/${scoreKey}`, {
         teamId: selectedTeam.id,
         wodId: selectedWod.id,
         time,
@@ -1090,7 +1102,7 @@
       });
       
       // Clear judge status
-      await DB.remove(`competitions/${compId}/judges/${judgeId}`);
+      await DB.remove(`${basePath}/judges/${judgeId}`);
       
       alert('✅ Score salvato!');
       

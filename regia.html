@@ -468,10 +468,25 @@ Open</textarea>
   <script type="module">
     import { DB } from './firebase-config.js';
     
-    // Get compId from URL param or localStorage
+    // Get compId or seasonId from URL param
     const urlParams = new URLSearchParams(location.search);
     let compId = urlParams.get('c') || localStorage.getItem('ark2_compId');
-    if (compId) localStorage.setItem('ark2_compId', compId); // sync
+    const seasonId = urlParams.get('s') || localStorage.getItem('ark2_seasonId');
+    
+    // Determine mode: competition or season
+    const isSeasonMode = !!seasonId && !compId;
+    const eventId = isSeasonMode ? seasonId : compId;
+    const basePath = isSeasonMode ? `seasons/${seasonId}` : `${basePath}`;
+    
+    // For season mode, override compId to use eventId
+    if (isSeasonMode) compId = seasonId;
+    
+    // Sync to localStorage
+    if (compId) localStorage.setItem('ark2_compId', compId);
+    if (seasonId) localStorage.setItem('ark2_seasonId', seasonId);
+    
+    console.log(`Regia mode: ${isSeasonMode ? 'SEASON' : 'COMPETITION'}, ID: ${eventId}`);
+    
     let competition = null;
     let categories = [];
     
@@ -528,7 +543,7 @@ Open</textarea>
         }
       }
       
-      competition = await DB.get(`competitions/${compId}`);
+      competition = await DB.get(`${basePath}`);
       if (!competition) {
         competition = { name: '', date: '', lanes: 3, categories: ['Experience', 'Scaled', 'Open'] };
       }
@@ -551,7 +566,7 @@ Open</textarea>
     }
     
     async function loadJudgeConfig() {
-      const config = await DB.get(`competitions/${compId}/judgeConfig`);
+      const config = await DB.get(`${basePath}/judgeConfig`);
       if (config) {
         document.getElementById('judgePin').value = config.pin || '1234';
         document.getElementById('lockScores').value = config.lockScores ? 'true' : 'false';
@@ -562,7 +577,7 @@ Open</textarea>
       const pin = document.getElementById('judgePin').value.trim() || '1234';
       const lockScores = document.getElementById('lockScores').value === 'true';
       
-      await DB.set(`competitions/${compId}/judgeConfig`, { pin, lockScores });
+      await DB.set(`${basePath}/judgeConfig`, { pin, lockScores });
       alert('✅ Configurazione giudici salvata!');
     };
     
@@ -587,7 +602,7 @@ Open</textarea>
       const lanes = parseInt(document.getElementById('compLanes').value) || 3;
       const cats = document.getElementById('compCategories').value.split('\n').map(c => c.trim()).filter(c => c);
       
-      await DB.update(`competitions/${compId}`, { name, date, lanes, categories: cats });
+      await DB.update(`${basePath}`, { name, date, lanes, categories: cats });
       categories = cats;
       updateCategorySelects();
       document.getElementById('compName').textContent = name;
@@ -596,7 +611,7 @@ Open</textarea>
     
     // Registration functions
     async function loadRegistrationConfig() {
-      const config = await DB.get(`competitions/${compId}/registration`);
+      const config = await DB.get(`${basePath}/registration`);
       if (config) {
         document.getElementById('regType').value = config.type || 'team';
         document.getElementById('regPrice').value = config.price || 0;
@@ -618,7 +633,7 @@ Open</textarea>
       const status = document.getElementById('regStatus').value;
       const teamSize = document.getElementById('regTeamSize').value;
       
-      await DB.set(`competitions/${compId}/registration`, { type, price, status, teamSize });
+      await DB.set(`${basePath}/registration`, { type, price, status, teamSize });
       alert('✅ Configurazione iscrizioni salvata!');
     };
     
@@ -635,7 +650,7 @@ Open</textarea>
     };
     
     async function loadRegistrations() {
-      const regs = await DB.get(`competitions/${compId}/registrations`);
+      const regs = await DB.get(`${basePath}/registrations`);
       const list = document.getElementById('registrationsList');
       
       if (!regs || Object.keys(regs).length === 0) {
@@ -672,13 +687,13 @@ Open</textarea>
     }
     
     window.approveRegistration = async (id) => {
-      await DB.update(`competitions/${compId}/registrations/${id}`, { status: 'confirmed' });
+      await DB.update(`${basePath}/registrations/${id}`, { status: 'confirmed' });
       loadRegistrations();
     };
     
     window.deleteRegistration = async (id) => {
       if (confirm('Eliminare questa iscrizione?')) {
-        await DB.remove(`competitions/${compId}/registrations/${id}`);
+        await DB.remove(`${basePath}/registrations/${id}`);
         loadRegistrations();
       }
     };
@@ -705,7 +720,7 @@ Open</textarea>
       if (!name) { alert('Inserisci nome WOD'); return; }
       
       const wodId = 'wod_' + Date.now();
-      await DB.set(`competitions/${compId}/workouts/${wodId}`, {
+      await DB.set(`${basePath}/workouts/${wodId}`, {
         name, type, timeCapSec: timeCap, movements, categories: selectedCats
       });
       
@@ -715,7 +730,7 @@ Open</textarea>
     };
     
     async function loadWods() {
-      const wods = await DB.get(`competitions/${compId}/workouts`);
+      const wods = await DB.get(`${basePath}/workouts`);
       const list = document.getElementById('wodList');
       
       if (!wods) {
@@ -740,7 +755,7 @@ Open</textarea>
     
     window.deleteWod = async (id) => {
       if (confirm('Eliminare questo WOD?')) {
-        await DB.remove(`competitions/${compId}/workouts/${id}`);
+        await DB.remove(`${basePath}/workouts/${id}`);
         loadWods();
       }
     };
@@ -755,11 +770,11 @@ Open</textarea>
       
       let teamId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
       // Check for duplicate ID and add suffix if needed
-      const existing = await DB.get(`competitions/${compId}/teams/${teamId}`);
+      const existing = await DB.get(`${basePath}/teams/${teamId}`);
       if (existing) {
         teamId = teamId + '_' + Date.now().toString(36).slice(-4);
       }
-      await DB.set(`competitions/${compId}/teams/${teamId}`, { name, emoji, category });
+      await DB.set(`${basePath}/teams/${teamId}`, { name, emoji, category });
       
       document.getElementById('teamName').value = '';
       document.getElementById('teamEmoji').value = '';
@@ -768,7 +783,7 @@ Open</textarea>
     };
     
     async function loadTeams() {
-      const teams = await DB.get(`competitions/${compId}/teams`);
+      const teams = await DB.get(`${basePath}/teams`);
       const list = document.getElementById('teamList');
       
       if (!teams) {
@@ -804,7 +819,7 @@ Open</textarea>
     
     window.deleteTeam = async (id) => {
       if (confirm('Eliminare questo team?')) {
-        await DB.remove(`competitions/${compId}/teams/${id}`);
+        await DB.remove(`${basePath}/teams/${id}`);
         loadTeams();
       }
     };
@@ -814,8 +829,8 @@ Open</textarea>
       const startTimeStr = document.getElementById('startTime').value;
       const pauseMin = parseInt(document.getElementById('pauseMin').value) || 3;
       
-      const wods = await DB.get(`competitions/${compId}/workouts`);
-      const teams = await DB.get(`competitions/${compId}/teams`);
+      const wods = await DB.get(`${basePath}/workouts`);
+      const teams = await DB.get(`${basePath}/teams`);
       const lanes = competition.lanes || 3;
       
       if (!wods || Object.keys(wods).length === 0) {
@@ -828,7 +843,7 @@ Open</textarea>
       }
       
       // Clear existing timeline
-      await DB.remove(`competitions/${compId}/timeline`);
+      await DB.remove(`${basePath}/timeline`);
       
       const [startH, startM] = startTimeStr.split(':').map(Number);
       let currentTime = startH * 60 + startM; // minutes from midnight
@@ -856,7 +871,7 @@ Open</textarea>
             const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
             
             const heatId = `heat_${heatNum}`;
-            await DB.set(`competitions/${compId}/timeline/${heatId}`, {
+            await DB.set(`${basePath}/timeline/${heatId}`, {
               number: heatNum,
               wodId,
               wodName: wod.name,
@@ -879,8 +894,8 @@ Open</textarea>
     };
     
     async function loadTimeline() {
-      const timeline = await DB.get(`competitions/${compId}/timeline`);
-      const teams = await DB.get(`competitions/${compId}/teams`) || {};
+      const timeline = await DB.get(`${basePath}/timeline`);
+      const teams = await DB.get(`${basePath}/teams`) || {};
       const list = document.getElementById('timelineList');
       
       if (!timeline) {
@@ -915,7 +930,7 @@ Open</textarea>
     loadCompetition();
     
     // Listen for judge connections
-    DB.listen(`competitions/${compId}/judges`, (judges) => {
+    DB.listen(`${basePath}/judges`, (judges) => {
       const container = document.getElementById('judgeStatus');
       const startBtn = document.getElementById('startBtn');
       
@@ -944,8 +959,8 @@ Open</textarea>
     
     window.startHeat = async () => {
       // Get current heat from timeline
-      const timeline = await DB.get(`competitions/${compId}/timeline`);
-      const judges = await DB.get(`competitions/${compId}/judges`);
+      const timeline = await DB.get(`${basePath}/timeline`);
+      const judges = await DB.get(`${basePath}/judges`);
       
       if (!timeline || !judges) {
         alert('Errore: timeline o giudici non trovati');
@@ -970,7 +985,7 @@ Open</textarea>
       const lanes = judgeList.map(j => j.teamId);
       
       // Set current heat with countdown
-      await DB.set(`competitions/${compId}/currentHeat`, {
+      await DB.set(`${basePath}/currentHeat`, {
         heatId: currentHeat.id,
         number: currentHeat.number,
         wodId: currentHeat.wodId,
@@ -984,11 +999,11 @@ Open</textarea>
       });
       
       // Update heat status
-      await DB.update(`competitions/${compId}/timeline/${currentHeat.id}`, { status: 'running' });
+      await DB.update(`${basePath}/timeline/${currentHeat.id}`, { status: 'running' });
       
       // After 10 seconds, start the actual timer
       setTimeout(async () => {
-        await DB.update(`competitions/${compId}/currentHeat`, {
+        await DB.update(`${basePath}/currentHeat`, {
           status: 'running',
           startedAt: Date.now()
         });
@@ -997,8 +1012,8 @@ Open</textarea>
       // After time cap, mark as done
       const totalTime = 10000 + (currentHeat.timeCapSec * 1000);
       setTimeout(async () => {
-        await DB.update(`competitions/${compId}/currentHeat`, { status: 'done' });
-        await DB.update(`competitions/${compId}/timeline/${currentHeat.id}`, { status: 'done' });
+        await DB.update(`${basePath}/currentHeat`, { status: 'done' });
+        await DB.update(`${basePath}/timeline/${currentHeat.id}`, { status: 'done' });
       }, totalTime);
       
       document.getElementById('startBtn').disabled = true;
@@ -1006,14 +1021,14 @@ Open</textarea>
     };
     
     window.stopHeat = async () => {
-      await DB.update(`competitions/${compId}/currentHeat`, { status: 'done' });
+      await DB.update(`${basePath}/currentHeat`, { status: 'done' });
       document.getElementById('startBtn').disabled = false;
       document.getElementById('startBtn').textContent = '▶️ START';
     };
     
     window.resetHeat = async () => {
-      await DB.remove(`competitions/${compId}/judges`);
-      await DB.remove(`competitions/${compId}/currentHeat`);
+      await DB.remove(`${basePath}/judges`);
+      await DB.remove(`${basePath}/currentHeat`);
       document.getElementById('startBtn').disabled = true;
       document.getElementById('startBtn').textContent = '▶️ START';
       alert('Giudici e heat resettati');

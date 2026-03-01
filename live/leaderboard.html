@@ -195,13 +195,25 @@
   <script type="module">
     import { DB } from '../firebase-config.js';
     
-    // Get compId from URL param or localStorage
+    // Get compId or seasonId from URL param
     const urlParams = new URLSearchParams(location.search);
     const compId = urlParams.get('c') || localStorage.getItem('ark2_compId');
-    if (compId) localStorage.setItem('ark2_compId', compId); // sync
-    if (!compId) {
+    const seasonId = urlParams.get('s') || localStorage.getItem('ark2_seasonId');
+    
+    // Determine mode: competition or season
+    const isSeasonMode = !!seasonId && !compId;
+    const eventId = isSeasonMode ? seasonId : compId;
+    const basePath = isSeasonMode ? `seasons/${seasonId}` : `${basePath}`;
+    
+    // Sync to localStorage
+    if (compId) localStorage.setItem('ark2_compId', compId);
+    if (seasonId) localStorage.setItem('ark2_seasonId', seasonId);
+    
+    if (!eventId) {
       location.href = 'index.html';
     }
+    
+    console.log(`Leaderboard mode: ${isSeasonMode ? 'SEASON' : 'COMPETITION'}`);
     
     let competition = null;
     let categories = [];
@@ -219,7 +231,7 @@
     };
     
     async function init() {
-      competition = await DB.get(`competitions/${compId}`);
+      competition = await DB.get(`${basePath}`);
       if (!competition) {
         alert('Gara non trovata');
         location.href = 'index.html';
@@ -280,14 +292,14 @@
     };
     
     async function loadData() {
-      teams = await DB.get(`competitions/${compId}/teams`) || {};
-      workouts = await DB.get(`competitions/${compId}/workouts`) || {};
-      scores = await DB.get(`competitions/${compId}/scores`) || {};
+      teams = await DB.get(`${basePath}/teams`) || {};
+      workouts = await DB.get(`${basePath}/workouts`) || {};
+      scores = await DB.get(`${basePath}/scores`) || {};
       
       renderLeaderboard();
       
       // Listen for score updates
-      DB.listen(`competitions/${compId}/scores`, (newScores) => {
+      DB.listen(`${basePath}/scores`, (newScores) => {
         scores = newScores || {};
         renderLeaderboard();
       });
