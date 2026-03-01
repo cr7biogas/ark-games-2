@@ -671,6 +671,31 @@ Beginner</textarea>
       document.getElementById(id).addEventListener('input', updateSummary);
     });
     
+    // Date validation
+    document.getElementById('endDate').addEventListener('change', validateDates);
+    document.getElementById('startDate').addEventListener('change', validateDates);
+    
+    function validateDates() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const endInput = document.getElementById('endDate');
+      
+      if (start && end && new Date(end) <= new Date(start)) {
+        endInput.style.borderColor = '#e74c3c';
+        endInput.setCustomValidity('La data fine deve essere dopo la data inizio');
+        // Auto-fix: set end to start + 3 months
+        const newEnd = new Date(start);
+        newEnd.setMonth(newEnd.getMonth() + 3);
+        endInput.value = newEnd.toISOString().split('T')[0];
+        endInput.style.borderColor = '#27ae60';
+        endInput.setCustomValidity('');
+        updateSummary();
+      } else {
+        endInput.style.borderColor = '';
+        endInput.setCustomValidity('');
+      }
+    }
+    
     function renderWods() {
       const list = document.getElementById('wodList');
       if (wods.length === 0) {
@@ -757,11 +782,112 @@ Beginner</textarea>
       }
     }
     
-    function renderLeaderboard() {
-      // TODO: Calculate from scores
-      document.getElementById('leaderboardContainer').innerHTML = `
-        <div class="empty-state"><div class="icon">🏆</div><p>Classifica disponibile quando inizia la season</p></div>
-      `;
+    async function renderLeaderboard() {
+      const container = document.getElementById('leaderboardContainer');
+      
+      if (!seasonId) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🏆</div><p>Salva la season per vedere la classifica</p></div>`;
+        return;
+      }
+      
+      // Load scores from Firebase
+      const scores = await DB.get(`seasons/${seasonId}/scores`) || {};
+      const scoreList = Object.values(scores);
+      
+      if (scoreList.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">🏆</div><p>Nessun punteggio ancora registrato</p></div>`;
+        return;
+      }
+      
+      // Get points system (default if not set)
+      const pointsSystem = season.pointsSystem || {
+        "1": 100, "2": 85, "3": 70, "4": 60, "5": 50,
+        "6": 45, "7": 40, "8": 35, "9": 30, "10": 25,
+        "default": 10
+      };
+      
+      // Group scores by team
+      const teamScores = {};
+      const teamWodResults = {};
+      
+      scoreList.forEach(score => {
+        const tid = score.teamId;
+        if (!teamScores[tid]) {
+          teamScores[tid] = 0;
+          teamWodResults[tid] = [];
+        }
+        teamWodResults[tid].push(score);
+      });
+      
+      // Calculate points per WOD
+      const wodIds = [...new Set(scoreList.map(s => s.wodId))];
+      
+      wodIds.forEach(wodId => {
+        // Get all scores for this WOD, grouped by category
+        const wodScores = scoreList.filter(s => s.wodId === wodId);
+        const categories = [...new Set(wodScores.map(s => teams[s.teamId]?.category || 'Unknown'))];
+        
+        categories.forEach(cat => {
+          const catScores = wodScores
+            .filter(s => teams[s.teamId]?.category === cat)
+            .sort((a, b) => {
+              // Sort by time (ascending) or reps (descending)
+              if (a.time && b.time) return a.time - b.time;
+              if (a.reps && b.reps) return b.reps - a.reps;
+              if (a.time) return -1;
+              return 1;
+            });
+          
+          // Assign points based on position
+          catScores.forEach((score, idx) => {
+            const pos = idx + 1;
+            const points = pointsSystem[pos.toString()] || pointsSystem.default || 10;
+            teamScores[score.teamId] = (teamScores[score.teamId] || 0) + points;
+          });
+        });
+      });
+      
+      // Sort teams by total points
+      const ranking = Object.entries(teamScores)
+        .map(([tid, points]) => ({
+          team: teams[tid] || { name: tid, emoji: '❓', category: '?' },
+          teamId: tid,
+          points,
+          wodsCompleted: teamWodResults[tid]?.length || 0
+        }))
+        .sort((a, b) => b.points - a.points);
+      
+      // Group by category
+      const categories = [...new Set(ranking.map(r => r.team.category))];
+      
+      container.innerHTML = categories.map(cat => {
+        const catRanking = ranking.filter(r => r.team.category === cat);
+        return `
+          <div style="margin-bottom:30px;">
+            <h4 style="color:#f39c12;margin-bottom:15px;">📊 ${cat}</h4>
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width:50px">#</th>
+                  <th>Team</th>
+                  <th style="width:80px">WODs</th>
+                  <th style="width:80px">Punti</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${catRanking.map((r, i) => `
+                  <tr>
+                    <td class="pos">${i + 1}</td>
+                    <td>${r.team.emoji || '🏆'} ${r.team.name}</td>
+                    <td>${r.wodsCompleted}/${wods.length}</td>
+                    <td><strong>${r.points}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }).join('') || '<div class="empty-state"><div class="icon">🏆</div><p>Nessun team trovato</p></div>';
     }
     
     function formatDate(dateStr) {
@@ -770,15 +896,34 @@ Beginner</textarea>
     }
     
     function updateInviteLink() {
-      const link = `${location.origin}/app/season.html?id=${seasonId || 'NEW'}`;
-      document.getElementById('inviteLink').value = link;
+      const input = document.getElementById('inviteLink');
+      const copyBtn = document.querySelector('[onclick="copyInviteLink()"]');
+      
+      if (!seasonId) {
+        input.value = '⚠️ Salva la season prima di condividere il link';
+        if (copyBtn) copyBtn.disabled = true;
+        return;
+      }
+      
+      const link = `${location.origin}/app/season.html?id=${seasonId}`;
+      input.value = link;
+      if (copyBtn) copyBtn.disabled = false;
     }
     
     window.copyInviteLink = () => {
+      if (!seasonId) {
+        alert('Salva prima la season!');
+        return;
+      }
       const input = document.getElementById('inviteLink');
-      input.select();
-      document.execCommand('copy');
-      alert('Link copiato!');
+      navigator.clipboard.writeText(input.value).then(() => {
+        alert('✅ Link copiato!');
+      }).catch(() => {
+        // Fallback for older browsers
+        input.select();
+        document.execCommand('copy');
+        alert('✅ Link copiato!');
+      });
     };
     
     // WOD functions
