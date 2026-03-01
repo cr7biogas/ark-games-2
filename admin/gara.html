@@ -308,7 +308,7 @@
         
         <div class="form-group">
           <label>Categorie (una per riga)</label>
-          <textarea id="compCategories" placeholder="RX&#10;Scaled&#10;Masters 40+">RX
+          <textarea id="compCategories" placeholder="RX&#10;Scaled&#10;Masters 40+" onchange="renderWods()">RX
 Scaled</textarea>
         </div>
         
@@ -524,14 +524,44 @@ Scaled</textarea>
           <div class="form-group">
             <textarea placeholder="Descrizione movimenti" onchange="wods[${i}].description = this.value">${w.description || ''}</textarea>
           </div>
+          <div class="form-group">
+            <label style="margin-bottom:8px;display:block;color:#888;font-size:0.85rem;">Categorie che fanno questo WOD:</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+              ${getCategories().map(cat => `
+                <label style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;">
+                  <input type="checkbox" 
+                    ${(w.categories || []).includes(cat) ? 'checked' : ''} 
+                    onchange="toggleWodCategory(${i}, '${cat}', this.checked)"
+                    style="width:18px;height:18px;">
+                  <span>${cat}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
         </div>
       `).join('');
     }
     
+    function getCategories() {
+      const textarea = document.getElementById('compCategories');
+      return textarea ? textarea.value.split('\n').map(c => c.trim()).filter(c => c) : ['RX', 'Scaled'];
+    }
+    
+    window.toggleWodCategory = (wodIndex, category, checked) => {
+      if (!wods[wodIndex].categories) wods[wodIndex].categories = [];
+      if (checked && !wods[wodIndex].categories.includes(category)) {
+        wods[wodIndex].categories.push(category);
+      } else if (!checked) {
+        wods[wodIndex].categories = wods[wodIndex].categories.filter(c => c !== category);
+      }
+    };
+    
     window.addWod = () => {
       // Save current input values before re-render
       saveCurrentWodValues();
-      wods.push({ name: '', type: 'fortime', timeCap: 12, description: '' });
+      // Default: all categories selected
+      const allCats = getCategories();
+      wods.push({ name: '', type: 'fortime', timeCap: 12, description: '', categories: [...allCats] });
       renderWods();
     };
     
