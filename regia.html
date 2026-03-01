@@ -985,7 +985,7 @@ Open</textarea>
       const lanes = judgeList.map(j => j.teamId);
       
       // Set current heat with countdown
-      await DB.set(`${basePath}/currentHeat`, {
+      const heatData = {
         heatId: currentHeat.id,
         number: currentHeat.number,
         wodId: currentHeat.wodId,
@@ -996,7 +996,21 @@ Open</textarea>
         status: 'countdown',
         countdownFrom: 10,
         countdownStartedAt: Date.now()
-      });
+      };
+      
+      await DB.set(`${basePath}/currentHeat`, heatData);
+      
+      // SEASON MODE: Also update currentEvent for judge.html compatibility
+      if (isSeasonMode) {
+        const currentEvent = await DB.get(`${basePath}/currentEvent`);
+        if (currentEvent) {
+          await DB.update(`${basePath}/currentEvent`, {
+            status: 'countdown',
+            countdownFrom: 10,
+            countdownStartedAt: Date.now()
+          });
+        }
+      }
       
       // Update heat status
       await DB.update(`${basePath}/timeline/${currentHeat.id}`, { status: 'running' });
@@ -1007,6 +1021,17 @@ Open</textarea>
           status: 'running',
           startedAt: Date.now()
         });
+        
+        // SEASON MODE: Sync currentEvent
+        if (isSeasonMode) {
+          const currentEvent = await DB.get(`${basePath}/currentEvent`);
+          if (currentEvent) {
+            await DB.update(`${basePath}/currentEvent`, {
+              status: 'running',
+              startedAt: Date.now()
+            });
+          }
+        }
       }, 10000);
       
       // After time cap, mark as done
@@ -1014,6 +1039,11 @@ Open</textarea>
       setTimeout(async () => {
         await DB.update(`${basePath}/currentHeat`, { status: 'done' });
         await DB.update(`${basePath}/timeline/${currentHeat.id}`, { status: 'done' });
+        
+        // SEASON MODE: Sync currentEvent
+        if (isSeasonMode) {
+          await DB.update(`${basePath}/currentEvent`, { status: 'done' });
+        }
       }, totalTime);
       
       document.getElementById('startBtn').disabled = true;

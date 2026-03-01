@@ -560,6 +560,7 @@
     const urlParams = new URLSearchParams(location.search);
     const compId = urlParams.get('c') || localStorage.getItem('ark2_compId');
     const seasonId = urlParams.get('s') || localStorage.getItem('ark2_seasonId');
+    const seasonDate = urlParams.get('date'); // For season mode: which day
     
     // Determine mode: competition or season
     const isSeasonMode = !!seasonId && !compId;
@@ -575,7 +576,11 @@
       location.href = 'index.html';
     }
     
-    console.log(`Judge mode: ${isSeasonMode ? 'SEASON' : 'COMPETITION'}, ID: ${eventId}`);
+    // Season mode state
+    let currentSeasonEvent = null; // { date, wodId, status }
+    let todayDate = seasonDate || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    console.log(`Judge mode: ${isSeasonMode ? 'SEASON' : 'COMPETITION'}, ID: ${eventId}${isSeasonMode ? ', Date: ' + todayDate : ''}`);
     
     let judgeId = null;
     let judgeName = '';
@@ -674,14 +679,50 @@
       document.getElementById(screenId).classList.add('active');
     };
     
-    // Load WODs
+    // Load WODs - filtered for season mode
     async function loadWods() {
-      const wods = await DB.get(`${basePath}/workouts`);
       const list = document.getElementById('wodList');
+      let wods = await DB.get(`${basePath}/workouts`);
       
       if (!wods || Object.keys(wods).length === 0) {
         list.innerHTML = '<div class="empty">Nessun WOD disponibile</div>';
         return;
+      }
+      
+      // SEASON MODE: Check for currentEvent and filter to today's WOD only
+      if (isSeasonMode) {
+        currentSeasonEvent = await DB.get(`${basePath}/currentEvent`);
+        
+        if (currentSeasonEvent && currentSeasonEvent.status === 'active') {
+          // Show only the WOD for today's event
+          const activeWodId = currentSeasonEvent.wodId;
+          const eventDate = currentSeasonEvent.date;
+          todayDate = eventDate; // Update to event date
+          
+          if (wods[activeWodId]) {
+            wods = { [activeWodId]: wods[activeWodId] };
+            document.querySelector('#screen-wod .header p').textContent = 
+              `Evento del ${eventDate} - Seleziona per giudicare`;
+          } else {
+            list.innerHTML = '<div class="empty">WOD dell\'evento non trovato</div>';
+            return;
+          }
+        } else {
+          // No active event - check schedule for today
+          const schedule = await DB.get(`${basePath}/schedule/${todayDate}`);
+          
+          if (schedule && schedule.wodId) {
+            if (wods[schedule.wodId]) {
+              wods = { [schedule.wodId]: wods[schedule.wodId] };
+              document.querySelector('#screen-wod .header p').textContent = 
+                `WOD del ${todayDate} - In attesa che l'admin apra l'evento`;
+            }
+          } else {
+            // Show all WODs with info that no event is active
+            document.querySelector('#screen-wod .header p').textContent = 
+              '⚠️ Nessun evento attivo - Mostrando tutti i WOD';
+          }
+        }
       }
       
       list.innerHTML = Object.entries(wods).map(([id, w]) => `
@@ -703,6 +744,15 @@
       loadTeams();
     };
     
+    // Generate score key - includes date for season mode
+    function getScoreKey(teamId, wodId) {
+      if (isSeasonMode) {
+        // Season scores include date to allow same team/wod on different recovery dates
+        return `${teamId}_${wodId}_${todayDate}`;
+      }
+      return `${teamId}_${wodId}`;
+    }
+    
     // Load teams (only those without score for this WOD)
     async function loadTeams() {
       allTeams = await DB.get(`${basePath}/teams`) || {};
@@ -716,8 +766,8 @@
         if (selectedWod.categories && !selectedWod.categories.includes(t.category)) {
           return false;
         }
-        // Check if already has score
-        const scoreKey = `${id}_${selectedWod.id}`;
+        // Check if already has score for this WOD (and date in season mode)
+        const scoreKey = getScoreKey(id, selectedWod.id);
         if (allScores[scoreKey]) {
           return false;
         }
@@ -806,7 +856,7 @@
       }
     };
     
-    // Listen for heat start
+    // Listen for heat start (or currentEvent in season mode)
     function listenForStart() {
       // Listen for judge count
       DB.listen(`${basePath}/judges`, (judges) => {
@@ -816,16 +866,32 @@
         document.getElementById('waitingStatus').textContent = `${ready}/${total} giudici pronti`;
       });
       
-      // Listen for heat status
-      DB.listen(`${basePath}/currentHeat`, (heat) => {
-        if (heat && heat.status === 'countdown') {
-          startCountdown(heat.countdownFrom || 10);
-        } else if (heat && heat.status === 'running') {
-          startTimer(heat.timeCapSec, heat.startedAt);
-        } else if (heat && heat.status === 'done') {
-          showScoreInput();
-        }
-      });
+      if (isSeasonMode) {
+        // SEASON MODE: Listen for currentEvent changes
+        DB.listen(`${basePath}/currentEvent`, (event) => {
+          if (!event) return;
+          currentSeasonEvent = event;
+          
+          if (event.status === 'countdown') {
+            startCountdown(event.countdownFrom || 10);
+          } else if (event.status === 'running') {
+            startTimer(selectedWod.timeCapSec || 600, event.startedAt);
+          } else if (event.status === 'done') {
+            showScoreInput();
+          }
+        });
+      } else {
+        // COMPETITION MODE: Listen for currentHeat
+        DB.listen(`${basePath}/currentHeat`, (heat) => {
+          if (heat && heat.status === 'countdown') {
+            startCountdown(heat.countdownFrom || 10);
+          } else if (heat && heat.status === 'running') {
+            startTimer(heat.timeCapSec, heat.startedAt);
+          } else if (heat && heat.status === 'done') {
+            showScoreInput();
+          }
+        });
+      }
     }
     
     // Voice synthesis helper
@@ -1076,7 +1142,7 @@
         return;
       }
       
-      const scoreKey = `${selectedTeam.id}_${selectedWod.id}`;
+      const scoreKey = getScoreKey(selectedTeam.id, selectedWod.id);
       
       // Check if score already exists and is locked
       const config = await DB.get(`${basePath}/judgeConfig`);
@@ -1098,7 +1164,9 @@
         reps,
         judgeId,
         judgeName: judgeName || 'Unknown',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        // Season mode: include event date for tracking
+        ...(isSeasonMode && { eventDate: todayDate })
       });
       
       // Clear judge status
