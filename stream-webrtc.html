@@ -254,7 +254,7 @@
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
     
-    const STALE_TIMEOUT = 15000; // 15 seconds without heartbeat = stale
+    const STALE_TIMEOUT = 30000; // 30 seconds without heartbeat = stale
     
     // State
     const cameras = new Map(); // camId -> { info, peerConnection, stream, unsubscribers, addedCandidates }
