@@ -68,7 +68,12 @@
     <h1>ARK Camera</h1>
     <p>Connetti questo telefono come camera WebRTC</p>
     <div class="error hidden" id="error"></div>
-    <input type="text" id="camName" placeholder="Nome camera (es: Lane 1)">
+    <select id="position" style="font-size:18px;">
+      <option value="0">📍 Lane 1</option>
+      <option value="1">📍 Lane 2</option>
+      <option value="2">📍 Lane 3</option>
+      <option value="3">📍 Overview</option>
+    </select>
     <select id="quality">
       <option value="720">720p (HD)</option>
       <option value="480" selected>480p (SD) - Consigliato</option>
@@ -141,7 +146,9 @@
     }
     
     window.start = async () => {
-      camName = document.getElementById('camName').value.trim() || 'Camera';
+      const position = parseInt(document.getElementById('position').value);
+      const positionNames = ['Lane 1', 'Lane 2', 'Lane 3', 'Overview'];
+      camName = positionNames[position];
       quality = document.getElementById('quality').value;
       
       const res = { '720': {w:1280,h:720}, '480': {w:854,h:480}, '360': {w:640,h:360} }[quality];
@@ -164,9 +171,10 @@
         camId = 'cam_' + Math.random().toString(36).substr(2, 8);
         document.getElementById('camId').textContent = camId;
         
-        // Register
+        // Register with position for auto-assignment
         await DB.set(`streams/${camId}`, {
           name: camName, quality, status: 'waiting',
+          position: position, // 0=Lane1, 1=Lane2, 2=Lane3, 3=Overview
           createdAt: Date.now(), lastHeartbeat: Date.now()
         });
         

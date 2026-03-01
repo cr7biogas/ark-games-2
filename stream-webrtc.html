@@ -452,6 +452,16 @@
         if (!cameras.has(id)) {
           cameras.set(id, { info, pc: null, stream: null, unsubscribers: [], addedCandidates: new Set() });
           log(`Nuova camera: ${info.name}`, 'success');
+          
+          // AUTO-ASSIGN to slot based on position
+          if (info.position !== undefined && info.position >= 0 && info.position <= 3) {
+            const slotIdx = info.position;
+            if (!slots[slotIdx]) {
+              // Slot is free, auto-assign
+              setTimeout(() => assignToSlot(slotIdx, id), 500);
+              log(`Auto-assegnata ${info.name} a slot ${slotIdx}`, 'success');
+            }
+          }
         } else {
           cameras.get(id).info = info;
         }
