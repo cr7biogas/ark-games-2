@@ -497,11 +497,32 @@ Open</textarea>
     // Load competition
     async function loadCompetition() {
       if (!compId) {
-        // Create new competition
-        const newId = 'comp_' + Date.now();
-        await DB.set(`competitions/${newId}`, { name: '', date: '', status: 'upcoming', lanes: 3, categories: ['Experience', 'Scaled', 'Open'] });
-        compId = newId;
-        localStorage.setItem('ark2_compId', compId);
+        // Check if there are existing competitions
+        const allComps = await DB.get('competitions');
+        if (allComps && Object.keys(allComps).length > 0) {
+          // Show selection dialog
+          const compList = Object.entries(allComps).map(([id, c]) => `${c.name || 'Senza nome'} (${id})`).join('\n');
+          const choice = prompt(`Gare esistenti:\n${compList}\n\nInserisci ID gara da caricare, oppure "NUOVA" per crearne una:`);
+          if (choice && choice !== 'NUOVA') {
+            const matchId = Object.keys(allComps).find(id => choice.includes(id) || id === choice);
+            if (matchId) {
+              compId = matchId;
+              localStorage.setItem('ark2_compId', compId);
+            }
+          }
+        }
+        
+        // Still no compId? Create new with confirmation
+        if (!compId) {
+          if (!confirm('Vuoi creare una NUOVA gara?')) {
+            alert('Operazione annullata');
+            return;
+          }
+          const newId = 'comp_' + Date.now();
+          await DB.set(`competitions/${newId}`, { name: '', date: '', status: 'upcoming', lanes: 3, categories: ['Experience', 'Scaled', 'Open'] });
+          compId = newId;
+          localStorage.setItem('ark2_compId', compId);
+        }
       }
       
       competition = await DB.get(`competitions/${compId}`);
@@ -729,7 +750,12 @@ Open</textarea>
       
       if (!name) { alert('Inserisci nome team'); return; }
       
-      const teamId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      let teamId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Check for duplicate ID and add suffix if needed
+      const existing = await DB.get(`competitions/${compId}/teams/${teamId}`);
+      if (existing) {
+        teamId = teamId + '_' + Date.now().toString(36).slice(-4);
+      }
       await DB.set(`competitions/${compId}/teams/${teamId}`, { name, emoji, category });
       
       document.getElementById('teamName').value = '';
