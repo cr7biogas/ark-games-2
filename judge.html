@@ -272,6 +272,80 @@
       color: #666;
     }
     
+    /* Rep Counter */
+    .timer-top { text-align: center; padding: 10px; }
+    .rep-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .rep-count {
+      font-size: 120px;
+      font-weight: 800;
+      line-height: 1;
+      color: #2ecc71;
+    }
+    .rep-label {
+      color: #888;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    .movement-current {
+      color: #e94560;
+      font-size: 18px;
+      margin-top: 16px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .movements-track {
+      max-height: 150px;
+      overflow-y: auto;
+      margin: 0 16px;
+      padding: 8px;
+      background: #111;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .movement-item {
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s;
+    }
+    .movement-item.done { background: #2ecc7133; color: #2ecc71; text-decoration: line-through; }
+    .movement-item.active { background: #e9456044; color: #e94560; font-weight: bold; transform: scale(1.02); }
+    .movement-item.pending { background: #1a1a1a; color: #666; }
+    .movement-item .reps { font-weight: bold; min-width: 50px; text-align: right; }
+    
+    .rep-buttons {
+      display: flex;
+      gap: 10px;
+      padding: 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .rep-btn {
+      flex: 1;
+      padding: 24px 16px;
+      border: none;
+      border-radius: 16px;
+      font-size: 24px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .rep-btn:active { transform: scale(0.95); }
+    .btn-rep { background: #2ecc71; color: #fff; flex: 3; }
+    .btn-norep { background: #c0392b; color: #fff; flex: 1; }
+    .btn-undo { background: #333; color: #888; flex: 1; }
+    
     /* PIN Login */
     .pin-dot {
       width: 16px;
@@ -431,18 +505,29 @@
     </button>
   </div>
   
-  <!-- SCREEN 5: Timer Running -->
+  <!-- SCREEN 5: Timer Running with Rep Counter -->
   <div class="screen timer-screen" id="screen-timer">
-    <div class="team-badge">
-      <span class="emoji" id="timerEmoji">🐾</span>
-      <span id="timerTeamName">Team</span>
+    <div class="timer-top">
+      <div class="team-badge">
+        <span class="emoji" id="timerEmoji">🐾</span>
+        <span id="timerTeamName">Team</span>
+      </div>
+      <div class="timer-status" id="timerStatus">In corso</div>
+      <div class="timer-display" id="timerDisplay">00:00</div>
     </div>
     
-    <div class="timer-status" id="timerStatus">In corso</div>
-    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="rep-area">
+      <div class="rep-count" id="repCount">0</div>
+      <div class="rep-label" id="repLabel">REPS</div>
+      <div class="movement-current" id="currentMovement"></div>
+    </div>
     
-    <div class="movements-list" id="timerMovements">
-      <h4>Movimenti</h4>
+    <div class="movements-track" id="timerMovements"></div>
+    
+    <div class="rep-buttons">
+      <button class="rep-btn btn-undo" onclick="undoRep()">↩️</button>
+      <button class="rep-btn btn-rep" onclick="addRep()">+1 REP</button>
+      <button class="rep-btn btn-norep" onclick="noRep()">NO REP</button>
     </div>
   </div>
   
@@ -490,6 +575,13 @@
     let timerInterval = null;
     let currentPin = '';
     let correctPin = '1234'; // Default PIN, loaded from Firebase
+    
+    // Rep counter state
+    let reps = 0;
+    let noReps = 0;
+    let movements = [];
+    let currentMovementIndex = 0;
+    let totalTargetReps = 0;
     
     // Load PIN from competition config
     async function loadJudgeConfig() {
@@ -792,16 +884,21 @@
       document.getElementById('timerStatus').className = 'timer-status running';
       document.getElementById('timerStatus').textContent = 'In corso';
       
-      // Show movements
-      document.getElementById('timerMovements').innerHTML = `
-        <h4>Movimenti</h4>
-        ${(selectedWod.movements || []).map(m => `
-          <div class="movement-item">
-            <span>${m.name}</span>
-            <span style="color:#888">${m.reps}</span>
-          </div>
-        `).join('')}
-      `;
+      // Initialize rep counter
+      reps = 0;
+      noReps = 0;
+      currentMovementIndex = 0;
+      movements = selectedWod.movements || [];
+      totalTargetReps = movements.reduce((sum, m) => sum + parseInt(m.reps || 0), 0);
+      
+      document.getElementById('repCount').textContent = '0';
+      document.getElementById('repLabel').textContent = totalTargetReps > 0 
+        ? `REPS (su ${totalTargetReps})` 
+        : 'REPS';
+      
+      // Render movements list with tracking
+      updateMovementsList();
+      updateCurrentMovement();
       
       if (timerInterval) clearInterval(timerInterval);
       
@@ -824,30 +921,122 @@
       }, 100);
     }
     
+    // Update movements list UI
+    function updateMovementsList() {
+      let cumulativeReps = 0;
+      document.getElementById('timerMovements').innerHTML = movements.map((m, i) => {
+        const targetReps = parseInt(m.reps || 0);
+        const startReps = cumulativeReps;
+        cumulativeReps += targetReps;
+        
+        let status = 'pending';
+        if (reps >= cumulativeReps) status = 'done';
+        else if (reps >= startReps) status = 'active';
+        
+        return `<div class="movement-item ${status}">
+          <span>${status === 'done' ? '✓ ' : ''}${m.name}</span>
+          <span class="reps">${m.reps}</span>
+        </div>`;
+      }).join('');
+    }
+    
+    // Update current movement indicator
+    function updateCurrentMovement() {
+      let cumulativeReps = 0;
+      for (let i = 0; i < movements.length; i++) {
+        cumulativeReps += parseInt(movements[i].reps || 0);
+        if (reps < cumulativeReps) {
+          currentMovementIndex = i;
+          document.getElementById('currentMovement').textContent = 
+            `👉 ${movements[i].name} (${movements[i].reps} reps)`;
+          return;
+        }
+      }
+      // All done
+      document.getElementById('currentMovement').textContent = '🎉 COMPLETATO!';
+    }
+    
+    // Add rep
+    window.addRep = async () => {
+      reps++;
+      document.getElementById('repCount').textContent = reps;
+      document.getElementById('repCount').style.transform = 'scale(1.1)';
+      setTimeout(() => document.getElementById('repCount').style.transform = 'scale(1)', 100);
+      
+      updateMovementsList();
+      updateCurrentMovement();
+      
+      // Sync to Firebase
+      await DB.update(`competitions/${compId}/judges/${judgeId}`, {
+        reps: reps,
+        noReps: noReps,
+        lastUpdate: Date.now()
+      });
+      
+      // Auto-submit for For Time if target reached
+      if (totalTargetReps > 0 && reps >= totalTargetReps) {
+        speak('Completo!');
+        beep(1000, 300);
+        setTimeout(showScoreInput, 1500);
+      }
+    };
+    
+    // No rep
+    window.noRep = async () => {
+      noReps++;
+      beep(300, 150);
+      
+      await DB.update(`competitions/${compId}/judges/${judgeId}`, {
+        reps: reps,
+        noReps: noReps,
+        lastUpdate: Date.now()
+      });
+    };
+    
+    // Undo rep
+    window.undoRep = async () => {
+      if (reps > 0) {
+        reps--;
+        document.getElementById('repCount').textContent = reps;
+        updateMovementsList();
+        updateCurrentMovement();
+        
+        await DB.update(`competitions/${compId}/judges/${judgeId}`, {
+          reps: reps,
+          lastUpdate: Date.now()
+        });
+      }
+    };
+    
     // Show score input
     function showScoreInput() {
+      if (timerInterval) clearInterval(timerInterval);
+      goToScreen('screen-score');
+      
       document.getElementById('scoreEmoji').textContent = selectedTeam.emoji;
       document.getElementById('scoreTeamName').textContent = selectedTeam.name;
       
       const fields = document.getElementById('scoreFields');
       
-      if (selectedWod.type === 'fortime') {
+      if ((selectedWod.type || 'fortime') === 'fortime') {
         fields.innerHTML = `
           <label>
-            <span>Tempo (MM:SS)</span>
+            <span>Tempo (MM:SS) - se completato</span>
             <input type="text" id="scoreTime" placeholder="05:30" pattern="[0-9]{2}:[0-9]{2}">
           </label>
           <label>
-            <span>oppure Reps</span>
-            <input type="number" id="scoreReps" placeholder="150">
+            <span>Reps totali (pre-compilato)</span>
+            <input type="number" id="scoreReps" value="${reps}" placeholder="150">
           </label>
+          <p style="color:#888;font-size:12px;margin-top:10px">No Reps: ${noReps}</p>
         `;
       } else {
         fields.innerHTML = `
           <label>
-            <span>Reps / Rounds</span>
-            <input type="number" id="scoreReps" placeholder="150">
+            <span>Reps / Rounds (pre-compilato)</span>
+            <input type="number" id="scoreReps" value="${reps}" placeholder="150">
           </label>
+          <p style="color:#888;font-size:12px;margin-top:10px">No Reps: ${noReps}</p>
         `;
       }
       
