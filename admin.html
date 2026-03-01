@@ -228,6 +228,7 @@
   
   <div class="tabs">
     <button class="tab active" data-tab="gara">🏆 Gara</button>
+    <button class="tab" data-tab="iscrizioni">📝 Iscrizioni</button>
     <button class="tab" data-tab="wod">💪 WOD</button>
     <button class="tab" data-tab="teams">👥 Team</button>
     <button class="tab" data-tab="timeline">📅 Timeline</button>
@@ -260,6 +261,59 @@ Scaled
 Open</textarea>
         </div>
         <button class="btn btn-primary" onclick="saveCompetition()">💾 Salva Gara</button>
+      </div>
+    </div>
+    
+    <!-- ISCRIZIONI -->
+    <div class="section" id="sec-iscrizioni">
+      <div class="card">
+        <h2>⚙️ Configura Iscrizioni</h2>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Tipo Partecipazione</label>
+            <select id="regType">
+              <option value="team">👥 A Squadre (Team)</option>
+              <option value="single">🏃 Individuale</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quota Iscrizione (€)</label>
+            <input type="number" id="regPrice" value="0" min="0" step="5" placeholder="0 = Gratis">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Stato Iscrizioni</label>
+            <select id="regStatus">
+              <option value="open">🟢 Aperte</option>
+              <option value="closed">🔴 Chiuse</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Membri per Team (min-max)</label>
+            <input type="text" id="regTeamSize" value="2-4" placeholder="Es: 2-4">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveRegistrationConfig()">💾 Salva Configurazione</button>
+      </div>
+      
+      <div class="card">
+        <h2>🔗 Link Iscrizione</h2>
+        <p style="color:#888;font-size:13px;margin-bottom:15px">Condividi questo link con gli atleti per permettere le iscrizioni:</p>
+        <div style="display:flex;gap:10px">
+          <input type="text" id="regUrl" readonly style="flex:1;background:#0a0a12;font-family:monospace;font-size:13px">
+          <button class="btn btn-secondary" onclick="copyRegUrl()" style="width:auto;padding:12px 20px;margin:0">📋 Copia</button>
+        </div>
+        <div style="margin-top:15px">
+          <button class="btn btn-secondary" onclick="shareRegUrl()" style="background:#25D366">📱 WhatsApp</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>📋 Iscrizioni Ricevute</h2>
+        <div id="registrationsList">
+          <div class="empty-state">Nessuna iscrizione ancora</div>
+        </div>
       </div>
     </div>
     
@@ -449,6 +503,7 @@ Open</textarea>
       loadWods();
       loadTeams();
       loadTimeline();
+      loadRegistrationConfig();
     }
     
     function updateCategorySelects() {
@@ -477,6 +532,95 @@ Open</textarea>
       updateCategorySelects();
       document.getElementById('compName').textContent = name;
       alert('✅ Gara salvata!');
+    };
+    
+    // Registration functions
+    async function loadRegistrationConfig() {
+      const config = await DB.get(`competitions/${compId}/registration`);
+      if (config) {
+        document.getElementById('regType').value = config.type || 'team';
+        document.getElementById('regPrice').value = config.price || 0;
+        document.getElementById('regStatus').value = config.status || 'open';
+        document.getElementById('regTeamSize').value = config.teamSize || '2-4';
+      }
+      
+      // Set registration URL
+      const baseUrl = location.origin;
+      const regUrl = `${baseUrl}/register.html?c=${compId}`;
+      document.getElementById('regUrl').value = regUrl;
+      
+      loadRegistrations();
+    }
+    
+    window.saveRegistrationConfig = async () => {
+      const type = document.getElementById('regType').value;
+      const price = parseInt(document.getElementById('regPrice').value) || 0;
+      const status = document.getElementById('regStatus').value;
+      const teamSize = document.getElementById('regTeamSize').value;
+      
+      await DB.set(`competitions/${compId}/registration`, { type, price, status, teamSize });
+      alert('✅ Configurazione iscrizioni salvata!');
+    };
+    
+    window.copyRegUrl = () => {
+      const url = document.getElementById('regUrl').value;
+      navigator.clipboard.writeText(url);
+      alert('✅ Link copiato!');
+    };
+    
+    window.shareRegUrl = () => {
+      const url = document.getElementById('regUrl').value;
+      const text = `🏋️ Iscriviti a ${competition?.name || 'ARK Games'}!\n\n`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text + url)}`, '_blank');
+    };
+    
+    async function loadRegistrations() {
+      const regs = await DB.get(`competitions/${compId}/registrations`);
+      const list = document.getElementById('registrationsList');
+      
+      if (!regs || Object.keys(regs).length === 0) {
+        list.innerHTML = '<div class="empty-state">Nessuna iscrizione ancora</div>';
+        return;
+      }
+      
+      const sorted = Object.entries(regs)
+        .map(([id, r]) => ({ id, ...r }))
+        .sort((a, b) => b.registeredAt - a.registeredAt);
+      
+      list.innerHTML = sorted.map(r => {
+        const isTeam = r.type === 'team';
+        const name = isTeam ? r.teamName : r.name;
+        const date = new Date(r.registeredAt).toLocaleDateString('it-IT');
+        const statusIcon = r.status === 'confirmed' ? '✅' : r.status === 'paid' ? '💰' : '⏳';
+        
+        return `
+          <div class="list-item">
+            <div class="emoji">${isTeam ? '👥' : '🏃'}</div>
+            <div class="info">
+              <h4>${name}</h4>
+              <p>${r.category} · ${r.email} · ${date}</p>
+              ${isTeam ? `<p style="font-size:11px;color:#666">Membri: ${r.members?.join(', ')}</p>` : ''}
+            </div>
+            <div class="actions">
+              <span class="chip">${statusIcon} ${r.status}</span>
+              <button onclick="approveRegistration('${r.id}')">✓</button>
+              <button class="delete" onclick="deleteRegistration('${r.id}')">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    window.approveRegistration = async (id) => {
+      await DB.update(`competitions/${compId}/registrations/${id}`, { status: 'confirmed' });
+      loadRegistrations();
+    };
+    
+    window.deleteRegistration = async (id) => {
+      if (confirm('Eliminare questa iscrizione?')) {
+        await DB.remove(`competitions/${compId}/registrations/${id}`);
+        loadRegistrations();
+      }
     };
     
     // Save WOD

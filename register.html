@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>📝 Iscrizione - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      padding: 30px 0;
+    }
+    .header .emoji { font-size: 60px; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header .subtitle { color: #888; font-size: 14px; }
+    .header .date { 
+      background: #e94560; 
+      display: inline-block; 
+      padding: 6px 16px; 
+      border-radius: 20px; 
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    
+    .info-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .info-card h3 {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    .info-card p {
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .price-tag {
+      font-size: 32px;
+      font-weight: 800;
+      color: #2ecc71;
+    }
+    .price-tag.free {
+      color: #2ecc71;
+    }
+    
+    .form-card {
+      background: rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 25px;
+      backdrop-filter: blur(10px);
+    }
+    .form-card h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      color: #aaa;
+      font-size: 13px;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .form-group label .required {
+      color: #e94560;
+    }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+    input::placeholder, textarea::placeholder {
+      color: #666;
+    }
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 15px center;
+    }
+    select option {
+      background: #1a1a2e;
+      color: #fff;
+    }
+    
+    .category-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .category-card {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .category-card:hover {
+      border-color: rgba(255,255,255,0.3);
+    }
+    .category-card.selected {
+      border-color: #e94560;
+      background: rgba(233,69,96,0.15);
+    }
+    .category-card .name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .category-card .desc {
+      font-size: 11px;
+      color: #888;
+    }
+    
+    /* Team members section */
+    .team-members {
+      margin-top: 20px;
+    }
+    .member-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .member-row input {
+      flex: 1;
+    }
+    .member-row .remove-btn {
+      background: #e94560;
+      border: none;
+      width: 44px;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .add-member-btn {
+      background: rgba(255,255,255,0.1);
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 12px;
+      width: 100%;
+      color: #888;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .add-member-btn:hover {
+      border-color: rgba(255,255,255,0.4);
+      color: #fff;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 18px;
+      border-radius: 14px;
+      border: none;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560, #ff6b6b);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(233,69,96,0.3);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .success-card {
+      text-align: center;
+      padding: 40px 20px;
+      display: none;
+    }
+    .success-card .emoji { font-size: 80px; margin-bottom: 20px; }
+    .success-card h2 { font-size: 24px; margin-bottom: 10px; color: #2ecc71; }
+    .success-card p { color: #888; margin-bottom: 20px; }
+    
+    .error {
+      background: rgba(231,76,60,0.2);
+      border: 1px solid #e74c3c;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #e74c3c;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #888;
+    }
+    .loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #333;
+      border-top-color: #e94560;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .closed-card {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .closed-card .emoji { font-size: 60px; margin-bottom: 20px; }
+    .closed-card h2 { font-size: 22px; margin-bottom: 10px; }
+    .closed-card p { color: #888; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loadingState" class="loading">
+      <div class="spinner"></div>
+      <p>Caricamento gara...</p>
+    </div>
+    
+    <div id="closedState" class="closed-card" style="display:none">
+      <div class="emoji">🚫</div>
+      <h2>Iscrizioni Chiuse</h2>
+      <p>Le iscrizioni per questa gara non sono più disponibili.</p>
+    </div>
+    
+    <div id="formState" style="display:none">
+      <div class="header">
+        <div class="emoji">🐾</div>
+        <h1 id="compName">ARK Games</h1>
+        <p class="subtitle" id="compLocation"></p>
+        <div class="date" id="compDate"></div>
+      </div>
+      
+      <div class="info-card" id="priceCard">
+        <h3>💰 Quota Iscrizione</h3>
+        <p class="price-tag" id="priceDisplay">GRATIS</p>
+      </div>
+      
+      <div class="form-card">
+        <h2 id="formTitle">📝 Iscriviti</h2>
+        
+        <div id="errorBox" class="error" style="display:none"></div>
+        
+        <div class="form-group">
+          <label>Categoria <span class="required">*</span></label>
+          <div class="category-cards" id="categoryCards"></div>
+        </div>
+        
+        <!-- Single athlete form -->
+        <div id="singleForm">
+          <div class="form-group">
+            <label>Nome Completo <span class="required">*</span></label>
+            <input type="text" id="athleteName" placeholder="Mario Rossi">
+          </div>
+          <div class="form-group">
+            <label>Email <span class="required">*</span></label>
+            <input type="email" id="athleteEmail" placeholder="mario@email.com">
+          </div>
+          <div class="form-group">
+            <label>Telefono</label>
+            <input type="tel" id="athletePhone" placeholder="+39 333 1234567">
+          </div>
+        </div>
+        
+        <!-- Team form -->
+        <div id="teamForm" style="display:none">
+          <div class="form-group">
+            <label>Nome Team <span class="required">*</span></label>
+            <input type="text" id="teamName" placeholder="Es: I Leoni">
+          </div>
+          <div class="form-group">
+            <label>Email Capitano <span class="required">*</span></label>
+            <input type="email" id="teamEmail" placeholder="capitano@email.com">
+          </div>
+          <div class="form-group">
+            <label>Telefono Capitano</label>
+            <input type="tel" id="teamPhone" placeholder="+39 333 1234567">
+          </div>
+          <div class="form-group">
+            <label>Membri del Team <span class="required">*</span></label>
+            <div class="team-members" id="teamMembers">
+              <div class="member-row">
+                <input type="text" placeholder="Nome membro 1 (capitano)">
+              </div>
+              <div class="member-row">
+                <input type="text" placeholder="Nome membro 2">
+              </div>
+            </div>
+            <button type="button" class="add-member-btn" onclick="addMember()">+ Aggiungi Membro</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Note (opzionale)</label>
+          <textarea id="notes" placeholder="Allergie, richieste speciali..." rows="2"></textarea>
+        </div>
+        
+        <button class="btn btn-primary" id="submitBtn" onclick="submitRegistration()">
+          ✅ Completa Iscrizione
+        </button>
+      </div>
+    </div>
+    
+    <div id="successState" class="success-card">
+      <div class="emoji">🎉</div>
+      <h2>Iscrizione Completata!</h2>
+      <p id="successMessage">Riceverai una email di conferma.</p>
+      <button class="btn btn-primary" onclick="location.reload()">🔄 Nuova Iscrizione</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { DB } from './firebase-config.js';
+    
+    // Get competition ID from URL
+    const params = new URLSearchParams(location.search);
+    const compId = params.get('c') || params.get('comp');
+    
+    if (!compId) {
+      showError('Link non valido. Manca l\'ID della gara.');
+    }
+    
+    let competition = null;
+    let registrationConfig = null;
+    let selectedCategory = null;
+    
+    async function init() {
+      try {
+        competition = await DB.get(`competitions/${compId}`);
+        registrationConfig = await DB.get(`competitions/${compId}/registration`);
+        
+        if (!competition) {
+          showError('Gara non trovata.');
+          return;
+        }
+        
+        // Check if registration is open
+        if (registrationConfig?.status === 'closed') {
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('closedState').style.display = 'block';
+          return;
+        }
+        
+        renderForm();
+      } catch (e) {
+        showError('Errore nel caricamento: ' + e.message);
+      }
+    }
+    
+    function renderForm() {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('formState').style.display = 'block';
+      
+      // Fill header
+      document.getElementById('compName').textContent = competition.name || 'Gara';
+      document.getElementById('compLocation').textContent = competition.location || '';
+      document.getElementById('compDate').textContent = competition.date || '';
+      
+      // Price
+      const price = registrationConfig?.price || 0;
+      const priceEl = document.getElementById('priceDisplay');
+      if (price === 0) {
+        priceEl.textContent = 'GRATIS';
+        priceEl.classList.add('free');
+      } else {
+        priceEl.textContent = '€' + price;
+      }
+      
+      // Form type (single vs team)
+      const isTeam = registrationConfig?.type === 'team';
+      document.getElementById('formTitle').textContent = isTeam ? '👥 Iscrivi il Team' : '🏃 Iscriviti';
+      document.getElementById('singleForm').style.display = isTeam ? 'none' : 'block';
+      document.getElementById('teamForm').style.display = isTeam ? 'block' : 'none';
+      
+      // Categories
+      const categories = competition.categories || ['Open'];
+      const catContainer = document.getElementById('categoryCards');
+      catContainer.innerHTML = categories.map(cat => `
+        <div class="category-card" onclick="selectCategory('${cat}', this)">
+          <div class="name">${cat}</div>
+        </div>
+      `).join('');
+      
+      // Select first category by default
+      if (categories.length > 0) {
+        const firstCard = catContainer.querySelector('.category-card');
+        selectCategory(categories[0], firstCard);
+      }
+    }
+    
+    window.selectCategory = (cat, el) => {
+      selectedCategory = cat;
+      document.querySelectorAll('.category-card').forEach(c => c.classList.remove('selected'));
+      if (el) el.classList.add('selected');
+    };
+    
+    window.addMember = () => {
+      const container = document.getElementById('teamMembers');
+      const count = container.children.length + 1;
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Nome membro ${count}">
+        <button type="button" class="remove-btn" onclick="this.parentElement.remove()">×</button>
+      `;
+      container.appendChild(row);
+    };
+    
+    window.submitRegistration = async () => {
+      const btn = document.getElementById('submitBtn');
+      const errorBox = document.getElementById('errorBox');
+      errorBox.style.display = 'none';
+      
+      if (!selectedCategory) {
+        showFormError('Seleziona una categoria');
+        return;
+      }
+      
+      const isTeam = registrationConfig?.type === 'team';
+      let data = {
+        category: selectedCategory,
+        notes: document.getElementById('notes').value.trim(),
+        registeredAt: Date.now(),
+        status: 'pending'
+      };
+      
+      if (isTeam) {
+        const teamName = document.getElementById('teamName').value.trim();
+        const email = document.getElementById('teamEmail').value.trim();
+        const phone = document.getElementById('teamPhone').value.trim();
+        
+        const members = [];
+        document.querySelectorAll('#teamMembers input').forEach(input => {
+          if (input.value.trim()) members.push(input.value.trim());
+        });
+        
+        if (!teamName) { showFormError('Inserisci il nome del team'); return; }
+        if (!email) { showFormError('Inserisci l\'email del capitano'); return; }
+        if (members.length < 2) { showFormError('Inserisci almeno 2 membri del team'); return; }
+        
+        data.teamName = teamName;
+        data.email = email;
+        data.phone = phone;
+        data.members = members;
+        data.type = 'team';
+      } else {
+        const name = document.getElementById('athleteName').value.trim();
+        const email = document.getElementById('athleteEmail').value.trim();
+        const phone = document.getElementById('athletePhone').value.trim();
+        
+        if (!name) { showFormError('Inserisci il tuo nome'); return; }
+        if (!email) { showFormError('Inserisci la tua email'); return; }
+        
+        data.name = name;
+        data.email = email;
+        data.phone = phone;
+        data.type = 'single';
+      }
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Invio in corso...';
+      
+      try {
+        // Generate registration ID
+        const regId = 'reg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        await DB.set(`competitions/${compId}/registrations/${regId}`, data);
+        
+        // Show success
+        document.getElementById('formState').style.display = 'none';
+        document.getElementById('successState').style.display = 'block';
+        document.getElementById('successMessage').textContent = 
+          `Iscrizione per ${isTeam ? data.teamName : data.name} confermata! Riceverai dettagli via email a ${data.email}`;
+        
+      } catch (e) {
+        showFormError('Errore: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '✅ Completa Iscrizione';
+      }
+    };
+    
+    function showFormError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = msg;
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function showError(msg) {
+      document.getElementById('loadingState').innerHTML = `
+        <div style="color:#e74c3c">❌ ${msg}</div>
+      `;
+    }
+    
+    init();
+  </script>
+</body>
+</html>
