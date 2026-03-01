@@ -376,6 +376,26 @@ Beginner</textarea>
         <button class="btn btn-success" onclick="generateWodsAI()" id="aiGenerateBtn">🤖 Genera WOD con AI</button>
         <p id="aiStatus" style="color:#888;font-size:0.85rem;text-align:center;margin-top:10px;display:none;"></p>
       </div>
+      
+      <!-- AI Preview Modal -->
+      <div id="aiPreviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;overflow-y:auto;padding:20px;">
+        <div style="max-width:700px;margin:0 auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="color:#9b59b6;">🤖 Anteprima WOD Season</h2>
+            <button onclick="closeAiPreview()" style="background:none;border:none;color:#888;font-size:24px;cursor:pointer;">✕</button>
+          </div>
+          <p style="color:#888;margin-bottom:20px;">Questi WOD saranno distribuiti nelle settimane della season (Week 1, Week 2, etc.)</p>
+          <div id="aiPreviewList" style="display:flex;flex-direction:column;gap:15px;"></div>
+          <div style="display:flex;gap:15px;margin-top:25px;position:sticky;bottom:20px;background:rgba(26,26,46,0.95);padding:15px;border-radius:12px;">
+            <button onclick="closeAiPreview()" style="flex:1;padding:14px;border:2px solid #555;border-radius:10px;background:transparent;color:#888;font-size:1rem;cursor:pointer;">
+              ❌ Annulla
+            </button>
+            <button onclick="confirmAiWods()" style="flex:2;padding:14px;border:none;border-radius:10px;background:#27ae60;color:white;font-size:1rem;font-weight:600;cursor:pointer;">
+              ✅ Usa Questi WOD
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- TEAMS TAB -->
@@ -755,27 +775,15 @@ Beginner</textarea>
           duration
         });
         
-        // Clear existing and add generated WODs
-        wods = generatedWods.map((w, i) => ({
-          id: w.id,
-          weekNumber: i + 1,
-          name: w.name || `Week ${i + 1}`,
-          type: w.type,
-          timeCapSec: w.timeCapSec || 600,
-          description: w.description,
-          movements: w.movements,
-          scalings: w.scalings
-        }));
+        // Store for preview confirmation
+        window.pendingAiWods = generatedWods;
+        window.pendingCategories = categories;
         
-        renderWods();
-        updateSummary();
+        // Show preview
+        showAiPreview(generatedWods, categories);
         
-        status.textContent = `✅ ${generatedWods.length} WOD generati con successo!`;
+        status.textContent = `✅ ${generatedWods.length} WOD generati! Verifica l'anteprima.`;
         status.style.color = '#27ae60';
-        
-        setTimeout(() => {
-          alert(`🤖 AI ha generato ${generatedWods.length} WOD per la season!\n\nOgni WOD include scalature per: ${categories.join(', ')}\n\nI WOD sono numerati da 1 a ${count} (Week 1, Week 2, etc.)`);
-        }, 500);
         
       } catch (error) {
         console.error('AI generation error:', error);
@@ -786,6 +794,75 @@ Beginner</textarea>
         btn.disabled = false;
         btn.textContent = '🤖 Genera WOD con AI';
       }
+    };
+    
+    // AI Preview functions
+    function showAiPreview(generatedWods, categories) {
+      const list = document.getElementById('aiPreviewList');
+      list.innerHTML = generatedWods.map((wod, i) => `
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:20px;border-left:4px solid #9b59b6;">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+            <h3 style="color:#f39c12;margin:0;">
+              <span style="background:#e94560;color:white;padding:4px 10px;border-radius:6px;font-size:0.8rem;margin-right:10px;">Week ${i + 1}</span>
+              ${wod.name}
+            </h3>
+            <span style="background:rgba(155,89,182,0.2);color:#9b59b6;padding:4px 12px;border-radius:20px;font-size:0.8rem;">
+              ${(wod.type || 'fortime').toUpperCase()} · ${Math.round((wod.timeCapSec || 600) / 60)} min
+            </span>
+          </div>
+          <p style="color:#ccc;margin-bottom:12px;">${wod.description || ''}</p>
+          ${wod.movements ? `
+            <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px;margin-bottom:12px;">
+              <strong style="color:#888;font-size:0.8rem;">MOVIMENTI:</strong>
+              <ul style="margin:8px 0 0 20px;color:#aaa;">
+                ${wod.movements.map(m => `<li>${m.name}: <strong>${m.reps}</strong></li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          ${wod.scalings ? `
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              ${Object.entries(wod.scalings).map(([cat, info]) => `
+                <div style="flex:1;min-width:120px;background:rgba(39,174,96,0.1);border-radius:8px;padding:10px;">
+                  <strong style="color:#27ae60;font-size:0.85rem;">${cat}</strong>
+                  <p style="color:#888;font-size:0.75rem;margin-top:4px;">${info.notes || '-'}</p>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+      
+      document.getElementById('aiPreviewModal').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+    
+    window.closeAiPreview = () => {
+      document.getElementById('aiPreviewModal').style.display = 'none';
+      document.body.style.overflow = '';
+      window.pendingAiWods = null;
+    };
+    
+    window.confirmAiWods = () => {
+      if (!window.pendingAiWods) return;
+      
+      // Replace WODs with generated ones
+      wods = window.pendingAiWods.map((w, i) => ({
+        id: w.id,
+        weekNumber: i + 1,
+        name: w.name || `Week ${i + 1}`,
+        type: w.type,
+        timeCapSec: w.timeCapSec || 600,
+        description: w.description,
+        movements: w.movements,
+        scalings: w.scalings
+      }));
+      
+      renderWods();
+      updateSummary();
+      closeAiPreview();
+      
+      alert(`✅ ${wods.length} WOD aggiunti alla season!\n\nOra puoi generare il calendario.`);
+      window.pendingAiWods = null;
     };
     
     // Schedule generator
