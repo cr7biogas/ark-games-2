@@ -401,6 +401,34 @@ Scaled</textarea>
           <input type="number" id="compLanes" value="4" min="1" max="10">
         </div>
       </div>
+      
+      <div class="section">
+        <h2>⚖️ Giudici</h2>
+        
+        <div class="form-group">
+          <label>PIN Accesso Giudici (4 cifre)</label>
+          <input type="text" id="judgePin" placeholder="1234" maxlength="4" pattern="[0-9]{4}" style="font-size:1.5rem;text-align:center;letter-spacing:8px;">
+        </div>
+        
+        <div class="toggle-row">
+          <div class="info">
+            <h4>Blocca Modifica Score</h4>
+            <p>I giudici non possono modificare score già inseriti</p>
+          </div>
+          <div class="toggle" id="toggleLockScores" onclick="this.classList.toggle('on')"></div>
+        </div>
+        
+        <button onclick="saveJudgeConfig()" style="width:100%;padding:14px;background:linear-gradient(135deg,#9b59b6,#8e44ad);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:15px;">
+          💾 Salva Config Giudici
+        </button>
+        
+        <div style="margin-top:20px;padding:15px;background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.3);border-radius:12px;">
+          <p style="color:#3498db;font-size:0.9rem;">
+            <strong>📱 Link per giudici:</strong><br>
+            <code id="judgeLink" style="word-break:break-all;"></code>
+          </p>
+        </div>
+      </div>
     </div>
     
     <!-- SHARE TAB -->
@@ -829,6 +857,41 @@ Scaled</textarea>
     
     // Load iscrizioni when tab is clicked
     document.querySelector('[data-tab="iscrizioni"]')?.addEventListener('click', loadIscrizioni);
+    
+    // Judge config
+    async function loadJudgeConfig() {
+      if (!compId) return;
+      const config = await DB.get(`competitions/${compId}/judgeConfig`) || {};
+      document.getElementById('judgePin').value = config.pin || '1234';
+      if (config.lockScores) document.getElementById('toggleLockScores').classList.add('on');
+      updateJudgeLink();
+    }
+    
+    function updateJudgeLink() {
+      const link = `${location.origin}/judge.html`;
+      document.getElementById('judgeLink').textContent = link;
+    }
+    
+    window.saveJudgeConfig = async () => {
+      if (!compId) { alert('Salva prima la gara'); return; }
+      
+      const pin = document.getElementById('judgePin').value.trim() || '1234';
+      if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+        alert('Il PIN deve essere di 4 cifre');
+        return;
+      }
+      
+      const lockScores = document.getElementById('toggleLockScores').classList.contains('on');
+      
+      await DB.set(`competitions/${compId}/judgeConfig`, { pin, lockScores });
+      alert('✅ Configurazione giudici salvata!');
+    };
+    
+    // Load judge config when settings tab is clicked
+    document.querySelector('[data-tab="settings"]')?.addEventListener('click', () => {
+      loadJudgeConfig();
+      updateJudgeLink();
+    });
   </script>
 </body>
 </html>
