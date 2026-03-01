@@ -262,7 +262,10 @@
   <script type="module">
     import { DB } from '../firebase-config.js';
     
-    const compId = localStorage.getItem('ark2_compId');
+    // Get compId from URL param or localStorage
+    const urlParams = new URLSearchParams(location.search);
+    const compId = urlParams.get('c') || localStorage.getItem('ark2_compId');
+    if (compId) localStorage.setItem('ark2_compId', compId); // sync
     if (!compId) location.href = 'index.html';
     
     let competition = null;
