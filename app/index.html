@@ -116,6 +116,13 @@
     }
     .badge-open { background: #27ae60; color: white; }
     .badge-live { background: #e74c3c; color: white; animation: pulse 1.5s infinite; }
+    .gara-card.live {
+      border-color: #e74c3c;
+      background: linear-gradient(135deg, rgba(233, 69, 96, 0.1), rgba(26, 26, 46, 0.9));
+    }
+    .gara-card.live .gara-logo {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
     .badge-closed { background: #555; color: #aaa; }
     .badge-soon { background: #f39c12; color: #000; }
     @keyframes pulse { 50% { opacity: 0.7; } }
@@ -238,15 +245,21 @@
         return;
       }
       
-      // Sort by date
-      comps.sort((a, b) => new Date(a[1].date || 0) - new Date(b[1].date || 0));
+      // Sort: LIVE first, then by date
+      comps.sort((a, b) => {
+        // LIVE competitions always first
+        if (a[1].status === 'live' && b[1].status !== 'live') return -1;
+        if (b[1].status === 'live' && a[1].status !== 'live') return 1;
+        // Then by date
+        return new Date(a[1].date || 0) - new Date(b[1].date || 0);
+      });
       
       list.innerHTML = comps.map(([id, comp]) => {
         const isLive = comp.status === 'live';
         const clickUrl = isLive ? `../live/leaderboard.html?c=${id}` : `gara.html?id=${id}`;
         
         return `
-        <div class="gara-card" onclick="location.href='${clickUrl}'">
+        <div class="gara-card ${isLive ? 'live' : ''}" onclick="location.href='${clickUrl}'">
           <div class="gara-header">
             <div class="gara-logo">${comp.emoji || '🏆'}</div>
             <div class="gara-info">

@@ -149,11 +149,6 @@
       </a>
     </div>
     
-    <div class="live-banner" id="liveBanner" style="display:none;">
-      <span class="pulse"></span>
-      <a href="live/tv.html" id="liveLink">Gara in corso - LIVE →</a>
-    </div>
-    
     <details class="dev-links">
       <summary>🔧 Accesso rapido (staff)</summary>
       <div class="dev-grid" style="grid-template-columns: 1fr;">
@@ -166,18 +161,5 @@
     <p>ARK Games 2.0 · <a href="https://github.com/cr7biogas/ark-games-2">GitHub</a></p>
   </footer>
   
-  <script type="module">
-    import { DB } from './firebase-config.js';
-    
-    // Check if any competition is live
-    DB.listen('competitions', (comps) => {
-      if (!comps) return;
-      const live = Object.entries(comps).find(([id, c]) => c.status === 'live');
-      if (live) {
-        document.getElementById('liveBanner').style.display = 'block';
-        document.getElementById('liveLink').textContent = `${live[1].name || 'Gara'} - LIVE →`;
-      }
-    });
-  </script>
 </body>
 </html>
