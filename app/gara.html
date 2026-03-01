@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dettaglio Gara - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      min-height: 100dvh;
+      color: white;
+      padding-bottom: 100px;
+    }
+    
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      background: transparent;
+      transition: background 0.3s;
+    }
+    .navbar.scrolled { background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); }
+    .navbar a { color: white; text-decoration: none; font-size: 0.9rem; padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); }
+    
+    .hero {
+      background: linear-gradient(135deg, #f39c12, #e74c3c);
+      padding: 80px 20px 40px;
+      text-align: center;
+    }
+    .hero .emoji { font-size: 4rem; margin-bottom: 15px; }
+    .hero h1 { font-size: 1.8rem; margin-bottom: 8px; }
+    .hero .box-name { opacity: 0.9; font-size: 1rem; }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 25px 20px;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .info-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+    .info-card .icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .info-card .label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-card .value { font-size: 1.15rem; font-weight: 600; margin-top: 4px; }
+    
+    .section { margin-bottom: 30px; }
+    .section h2 {
+      font-size: 1rem;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #f39c12;
+    }
+    
+    .wod-list { display: flex; flex-direction: column; gap: 12px; }
+    .wod-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .wod-item:hover { background: rgba(255,255,255,0.08); }
+    .wod-item .name { font-weight: 600; margin-bottom: 3px; }
+    .wod-item .type { color: #f39c12; font-size: 0.85rem; }
+    .wod-item .arrow { color: #666; }
+    
+    .categories { display: flex; flex-wrap: wrap; gap: 10px; }
+    .cat-badge {
+      background: rgba(52, 152, 219, 0.15);
+      border: 1px solid rgba(52, 152, 219, 0.4);
+      padding: 10px 16px;
+      border-radius: 25px;
+      font-size: 0.9rem;
+    }
+    
+    .description {
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 18px;
+      line-height: 1.6;
+      color: #ccc;
+    }
+    
+    .cta-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(26, 26, 46, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .price { font-size: 1.6rem; font-weight: 700; }
+    .price span { font-size: 0.9rem; color: #888; font-weight: 400; }
+    .cta-btn {
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      color: white;
+      border: none;
+      padding: 15px 35px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .cta-btn:hover { transform: scale(1.02); }
+    .cta-btn:disabled { background: #555; cursor: not-allowed; }
+    
+    .loading { text-align: center; padding: 60px 20px; color: #888; }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <a href="./">← Gare</a>
+    <a href="../live/leaderboard.html">🏆 Live</a>
+  </nav>
+  
+  <div id="content">
+    <div class="loading">Caricamento...</div>
+  </div>
+  
+  <div class="cta-bar" id="ctaBar" style="display:none;">
+    <div class="price" id="price">€0</div>
+    <button class="cta-btn" id="ctaBtn" onclick="register()">ISCRIVITI →</button>
+  </div>
+
+  <script type="module">
+    import { DB } from '../firebase-config.js';
+    
+    const params = new URLSearchParams(location.search);
+    const compId = params.get('id');
+    let competition = null;
+    let wods = [];
+    
+    if (!compId) {
+      document.getElementById('content').innerHTML = '<div class="loading">Gara non trovata</div>';
+    } else {
+      loadCompetition();
+    }
+    
+    async function loadCompetition() {
+      competition = await DB.get(`competitions/${compId}`);
+      wods = Object.values(await DB.get(`competitions/${compId}/wods`) || {});
+      
+      if (!competition) {
+        document.getElementById('content').innerHTML = '<div class="loading">Gara non trovata</div>';
+        return;
+      }
+      
+      render();
+    }
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return 'TBD';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    
+    function render() {
+      const categories = competition.categories || ['RX', 'Scaled'];
+      const regOpen = competition.registrationOpen !== false && competition.status !== 'done';
+      
+      document.getElementById('content').innerHTML = `
+        <div class="hero">
+          <div class="emoji">${competition.emoji || '🏆'}</div>
+          <h1>${competition.name || 'Gara'}</h1>
+          <div class="box-name">${competition.boxName || 'CrossFit Box'}</div>
+        </div>
+        
+        <div class="container">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="icon">📅</div>
+              <div class="label">Data</div>
+              <div class="value">${formatDate(competition.date)}</div>
+            </div>
+            <div class="info-card">
+              <div class="icon">📍</div>
+              <div class="label">Luogo</div>
+              <div class="value">${competition.location || 'TBD'}</div>
+            </div>
+            <div class="info-card">
+              <div class="icon">👥</div>
+              <div class="label">Iscritti</div>
+              <div class="value">${competition.athleteCount || 0} / ${competition.maxAthletes || '∞'}</div>
+            </div>
+            <div class="info-card">
+              <div class="icon">⏰</div>
+              <div class="label">Chiusura</div>
+              <div class="value">${competition.regDeadline || 'Aperta'}</div>
+            </div>
+          </div>
+          
+          ${wods.length > 0 ? `
+          <div class="section">
+            <h2>🏋️ WOD (${wods.length})</h2>
+            <div class="wod-list">
+              ${wods.map((w, i) => `
+                <div class="wod-item">
+                  <div>
+                    <div class="name">${w.name || `WOD ${i+1}`}</div>
+                    <div class="type">${w.type || 'For Time'}</div>
+                  </div>
+                  <span class="arrow">→</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+          
+          <div class="section">
+            <h2>📋 Categorie</h2>
+            <div class="categories">
+              ${categories.map(c => `<span class="cat-badge">${c}</span>`).join('')}
+            </div>
+          </div>
+          
+          ${competition.description ? `
+          <div class="section">
+            <h2>📝 Descrizione</h2>
+            <div class="description">${competition.description}</div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+      
+      // CTA bar
+      document.getElementById('ctaBar').style.display = 'flex';
+      document.getElementById('price').innerHTML = `€${competition.price || 0} <span>/ atleta</span>`;
+      
+      const btn = document.getElementById('ctaBtn');
+      if (!regOpen) {
+        btn.disabled = true;
+        btn.textContent = competition.status === 'done' ? 'CONCLUSA' : 'ISCRIZIONI CHIUSE';
+      }
+    }
+    
+    window.register = () => {
+      location.href = `iscrizione.html?c=${compId}`;
+    };
+    
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+      document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+    });
+  </script>
+</body>
+</html>

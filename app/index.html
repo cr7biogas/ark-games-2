@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gare Disponibili - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      min-height: 100dvh;
+      color: white;
+    }
+    
+    .navbar {
+      background: rgba(0,0,0,0.4);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .navbar a { color: #888; text-decoration: none; font-size: 0.9rem; }
+    .navbar a:hover { color: white; }
+    .navbar .brand { color: #f39c12; font-weight: 700; font-size: 1.1rem; }
+    .navbar .profile-btn {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    
+    header {
+      padding: 30px 20px 20px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.6rem; margin-bottom: 8px; }
+    header p { color: #888; font-size: 0.95rem; }
+    
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 20px 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      border-radius: 25px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      color: #888;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab.active { background: #f39c12; color: #000; font-weight: 600; }
+    .tab:hover:not(.active) { background: rgba(255,255,255,0.1); }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0 20px 100px;
+    }
+    
+    .gara-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      margin-bottom: 15px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .gara-card:hover {
+      border-color: rgba(243, 156, 18, 0.5);
+      transform: translateY(-2px);
+    }
+    
+    .gara-header {
+      padding: 20px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .gara-logo {
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, #f39c12, #e74c3c);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+    .gara-info { flex: 1; min-width: 0; }
+    .gara-info h3 {
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .gara-info .box-name { color: #f39c12; font-size: 0.85rem; margin-bottom: 4px; }
+    .gara-info .date { color: #888; font-size: 0.85rem; }
+    
+    .gara-badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-open { background: #27ae60; color: white; }
+    .badge-live { background: #e74c3c; color: white; animation: pulse 1.5s infinite; }
+    .badge-closed { background: #555; color: #aaa; }
+    .badge-soon { background: #f39c12; color: #000; }
+    @keyframes pulse { 50% { opacity: 0.7; } }
+    
+    .gara-footer {
+      background: rgba(0,0,0,0.2);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #888;
+    }
+    .gara-footer span { display: flex; align-items: center; gap: 5px; }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    .empty-state .icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+    .empty-state p { font-size: 1rem; }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    .loading .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #f39c12;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../">← Home</a>
+    <span class="brand">ARK Games</span>
+    <a href="profilo.html" class="profile-btn">👤</a>
+  </nav>
+  
+  <header>
+    <h1>🏆 Gare Disponibili</h1>
+    <p>Trova e iscriviti alle competizioni</p>
+  </header>
+  
+  <div class="tabs">
+    <button class="tab active" data-filter="all">Tutte</button>
+    <button class="tab" data-filter="open">Iscrizioni Aperte</button>
+    <button class="tab" data-filter="mine">Le Mie</button>
+  </div>
+  
+  <div class="container">
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Caricamento gare...</p>
+    </div>
+    <div id="garaList"></div>
+  </div>
+
+  <script type="module">
+    import { DB } from '../firebase-config.js';
+    
+    let competitions = {};
+    let currentFilter = 'all';
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        renderList();
+      };
+    });
+    
+    function getBadge(comp) {
+      if (comp.status === 'live') return '<span class="gara-badge badge-live">🔴 LIVE</span>';
+      if (comp.status === 'closed' || comp.status === 'done') return '<span class="gara-badge badge-closed">CONCLUSA</span>';
+      
+      const regOpen = comp.registrationOpen !== false;
+      if (regOpen) return '<span class="gara-badge badge-open">ISCRIVITI</span>';
+      return '<span class="gara-badge badge-soon">PROSSIMAMENTE</span>';
+    }
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return 'Data TBD';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    
+    function renderList() {
+      const list = document.getElementById('garaList');
+      const loading = document.getElementById('loading');
+      loading.style.display = 'none';
+      
+      let comps = Object.entries(competitions);
+      
+      // Filter
+      if (currentFilter === 'open') {
+        comps = comps.filter(([id, c]) => c.registrationOpen !== false && c.status !== 'done');
+      } else if (currentFilter === 'mine') {
+        // TODO: filter by user's registrations
+        comps = [];
+      }
+      
+      if (comps.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🏋️</div>
+            <p>${currentFilter === 'mine' ? 'Non sei ancora iscritto a nessuna gara' : 'Nessuna gara disponibile'}</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Sort by date
+      comps.sort((a, b) => new Date(a[1].date || 0) - new Date(b[1].date || 0));
+      
+      list.innerHTML = comps.map(([id, comp]) => `
+        <div class="gara-card" onclick="location.href='gara.html?id=${id}'">
+          <div class="gara-header">
+            <div class="gara-logo">${comp.emoji || '🏆'}</div>
+            <div class="gara-info">
+              <h3>${comp.name || 'Gara Senza Nome'}</h3>
+              <div class="box-name">${comp.boxName || 'CrossFit Box'}</div>
+              <div class="date">📅 ${formatDate(comp.date)}</div>
+            </div>
+            ${getBadge(comp)}
+          </div>
+          <div class="gara-footer">
+            <span>👥 ${comp.athleteCount || 0} iscritti</span>
+            <span>🏋️ ${comp.wodCount || 0} WOD</span>
+            <span>💰 €${comp.price || 0}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Load competitions
+    DB.listen('competitions', (data) => {
+      competitions = data || {};
+      renderList();
+    });
+  </script>
+</body>
+</html>

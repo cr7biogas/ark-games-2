@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gestione Gara - ARK Games</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+      padding-bottom: 100px;
+    }
+    
+    .navbar {
+      background: rgba(0,0,0,0.4);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .navbar a { color: #888; text-decoration: none; padding: 8px 12px; border-radius: 8px; }
+    .navbar a:hover { background: rgba(255,255,255,0.1); color: white; }
+    .navbar .title { color: #f39c12; font-weight: 700; }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 25px 20px;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 25px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+    }
+    .tab {
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      color: #888;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .tab.active { background: #f39c12; color: #000; font-weight: 600; }
+    .tab:hover:not(.active) { background: rgba(255,255,255,0.1); }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .section { margin-bottom: 30px; }
+    .section h2 {
+      font-size: 1rem;
+      color: #f39c12;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 8px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: white;
+      font-size: 16px;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #f39c12;
+    }
+    .form-group textarea { min-height: 100px; resize: vertical; }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    .emoji-picker {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .emoji-opt {
+      width: 50px; height: 50px;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .emoji-opt:hover { border-color: #f39c12; }
+    .emoji-opt.selected { border-color: #f39c12; background: rgba(243, 156, 18, 0.2); }
+    
+    .wod-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .wod-card .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .wod-card .header h3 { font-size: 1rem; }
+    .wod-card .delete-btn {
+      background: rgba(231, 76, 60, 0.2);
+      border: 1px solid rgba(231, 76, 60, 0.4);
+      color: #e74c3c;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    
+    .add-btn {
+      width: 100%;
+      padding: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 14px;
+      color: #888;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .add-btn:hover { border-color: #f39c12; color: #f39c12; }
+    
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .toggle-row .info h4 { font-size: 0.95rem; margin-bottom: 3px; }
+    .toggle-row .info p { font-size: 0.8rem; color: #888; }
+    .toggle {
+      width: 50px; height: 28px;
+      background: #555;
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle.on { background: #27ae60; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 22px; height: 22px;
+      background: white;
+      border-radius: 50%;
+      top: 3px; left: 3px;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 25px; }
+    
+    .cta-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(26, 26, 46, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 15px 20px;
+      display: flex;
+      gap: 15px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .cta-bar button {
+      flex: 1;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .save-btn { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; }
+    .draft-btn { background: transparent; border: 1px solid #555; color: #888; }
+    .draft-btn:hover { border-color: #888; color: white; }
+    
+    .link-box {
+      background: rgba(52, 152, 219, 0.15);
+      border: 1px solid rgba(52, 152, 219, 0.4);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 15px;
+    }
+    .link-box label { color: #3498db; margin-bottom: 10px; display: block; }
+    .link-box .url {
+      display: flex;
+      gap: 10px;
+    }
+    .link-box input {
+      flex: 1;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 12px;
+      color: white;
+      font-size: 0.9rem;
+    }
+    .link-box button {
+      background: #3498db;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="./">← Dashboard</a>
+    <span class="title" id="pageTitle">Nuova Gara</span>
+    <a href="../admin.html">⏱️ Timer</a>
+  </nav>
+  
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="info">📋 Info</button>
+      <button class="tab" data-tab="wod">🏋️ WOD</button>
+      <button class="tab" data-tab="settings">⚙️ Impostazioni</button>
+      <button class="tab" data-tab="share">🔗 Condividi</button>
+    </div>
+    
+    <!-- INFO TAB -->
+    <div class="tab-content active" id="tab-info">
+      <div class="section">
+        <div class="form-group">
+          <label>Nome Gara *</label>
+          <input type="text" id="compName" placeholder="Es: ARK Games Spring 2026">
+        </div>
+        
+        <div class="form-group">
+          <label>Icona</label>
+          <div class="emoji-picker" id="emojiPicker">
+            <div class="emoji-opt selected" data-emoji="🏆">🏆</div>
+            <div class="emoji-opt" data-emoji="🦁">🦁</div>
+            <div class="emoji-opt" data-emoji="🔥">🔥</div>
+            <div class="emoji-opt" data-emoji="⚡">⚡</div>
+            <div class="emoji-opt" data-emoji="💪">💪</div>
+            <div class="emoji-opt" data-emoji="🐺">🐺</div>
+            <div class="emoji-opt" data-emoji="🎯">🎯</div>
+            <div class="emoji-opt" data-emoji="🚀">🚀</div>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" id="compDate">
+          </div>
+          <div class="form-group">
+            <label>Ora Inizio</label>
+            <input type="time" id="compTime" value="09:00">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prezzo (€)</label>
+            <input type="number" id="compPrice" value="25" min="0">
+          </div>
+          <div class="form-group">
+            <label>Max Atleti</label>
+            <input type="number" id="compMax" value="60" min="1">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Luogo</label>
+          <input type="text" id="compLocation" placeholder="Es: CrossFit ARK, Roma">
+        </div>
+        
+        <div class="form-group">
+          <label>Categorie (una per riga)</label>
+          <textarea id="compCategories" placeholder="RX&#10;Scaled&#10;Masters 40+">RX
+Scaled</textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Descrizione</label>
+          <textarea id="compDesc" placeholder="Descrivi la tua gara..."></textarea>
+        </div>
+      </div>
+    </div>
+    
+    <!-- WOD TAB -->
+    <div class="tab-content" id="tab-wod">
+      <div class="section">
+        <h2>🏋️ WOD della Gara</h2>
+        <div id="wodList"></div>
+        <button class="add-btn" onclick="addWod()">➕ Aggiungi WOD</button>
+      </div>
+    </div>
+    
+    <!-- SETTINGS TAB -->
+    <div class="tab-content" id="tab-settings">
+      <div class="section">
+        <h2>⚙️ Configurazione</h2>
+        
+        <div class="toggle-row">
+          <div class="info">
+            <h4>Iscrizioni Aperte</h4>
+            <p>Gli atleti possono iscriversi</p>
+          </div>
+          <div class="toggle on" id="toggleReg" onclick="this.classList.toggle('on')"></div>
+        </div>
+        
+        <div class="toggle-row">
+          <div class="info">
+            <h4>Approvazione Manuale</h4>
+            <p>Approva ogni iscrizione</p>
+          </div>
+          <div class="toggle" id="toggleApproval" onclick="this.classList.toggle('on')"></div>
+        </div>
+        
+        <div class="toggle-row">
+          <div class="info">
+            <h4>Team Mode</h4>
+            <p>Gara a squadre invece che individuale</p>
+          </div>
+          <div class="toggle" id="toggleTeam" onclick="this.classList.toggle('on')"></div>
+        </div>
+        
+        <div class="form-group" style="margin-top:20px;">
+          <label>Numero Lane</label>
+          <input type="number" id="compLanes" value="4" min="1" max="10">
+        </div>
+      </div>
+    </div>
+    
+    <!-- SHARE TAB -->
+    <div class="tab-content" id="tab-share">
+      <div class="section">
+        <h2>🔗 Link Iscrizione</h2>
+        <p style="color:#888;margin-bottom:15px;">Condividi questo link per le iscrizioni</p>
+        
+        <div class="link-box">
+          <label>Link pubblico</label>
+          <div class="url">
+            <input type="text" id="shareUrl" readonly>
+            <button onclick="copyLink()">📋 Copia</button>
+          </div>
+        </div>
+        
+        <div style="text-align:center;margin-top:30px;">
+          <p style="color:#888;margin-bottom:15px;">QR Code</p>
+          <div id="qrcode" style="background:white;padding:20px;display:inline-block;border-radius:12px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="cta-bar">
+    <button class="draft-btn" onclick="saveDraft()">💾 Bozza</button>
+    <button class="save-btn" onclick="saveAndPublish()">✅ Salva e Pubblica</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script type="module">
+    import { DB } from '../firebase-config.js';
+    
+    const params = new URLSearchParams(location.search);
+    let compId = params.get('id');
+    let competition = {};
+    let wods = [];
+    let selectedEmoji = '🏆';
+    
+    // Check auth
+    const session = localStorage.getItem('ark_admin_session');
+    if (!session) {
+      location.href = './';
+    }
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      };
+    });
+    
+    // Emoji picker
+    document.querySelectorAll('.emoji-opt').forEach(opt => {
+      opt.onclick = () => {
+        document.querySelectorAll('.emoji-opt').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        selectedEmoji = opt.dataset.emoji;
+      };
+    });
+    
+    // Load existing competition
+    if (compId) {
+      loadCompetition();
+    } else {
+      updateShareLink();
+    }
+    
+    async function loadCompetition() {
+      competition = await DB.get(`competitions/${compId}`) || {};
+      wods = Object.entries(await DB.get(`competitions/${compId}/wods`) || {}).map(([id, w]) => ({...w, id}));
+      
+      document.getElementById('pageTitle').textContent = competition.name || 'Modifica Gara';
+      document.getElementById('compName').value = competition.name || '';
+      document.getElementById('compDate').value = competition.date || '';
+      document.getElementById('compTime').value = competition.time || '09:00';
+      document.getElementById('compPrice').value = competition.price || 25;
+      document.getElementById('compMax').value = competition.maxAthletes || 60;
+      document.getElementById('compLocation').value = competition.location || '';
+      document.getElementById('compCategories').value = (competition.categories || ['RX', 'Scaled']).join('\n');
+      document.getElementById('compDesc').value = competition.description || '';
+      document.getElementById('compLanes').value = competition.lanes || 4;
+      
+      if (competition.emoji) {
+        selectedEmoji = competition.emoji;
+        document.querySelectorAll('.emoji-opt').forEach(o => {
+          o.classList.toggle('selected', o.dataset.emoji === selectedEmoji);
+        });
+      }
+      
+      if (competition.registrationOpen) document.getElementById('toggleReg').classList.add('on');
+      else document.getElementById('toggleReg').classList.remove('on');
+      
+      if (competition.requireApproval) document.getElementById('toggleApproval').classList.add('on');
+      if (competition.teamMode) document.getElementById('toggleTeam').classList.add('on');
+      
+      renderWods();
+      updateShareLink();
+    }
+    
+    function renderWods() {
+      const list = document.getElementById('wodList');
+      if (wods.length === 0) {
+        list.innerHTML = '<p style="color:#666;text-align:center;padding:30px;">Nessun WOD aggiunto</p>';
+        return;
+      }
+      
+      list.innerHTML = wods.map((w, i) => `
+        <div class="wod-card">
+          <div class="header">
+            <h3>WOD ${i + 1}</h3>
+            <button class="delete-btn" onclick="deleteWod(${i})">🗑️ Elimina</button>
+          </div>
+          <div class="form-group">
+            <input type="text" value="${w.name || ''}" placeholder="Nome WOD" onchange="wods[${i}].name = this.value">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <select onchange="wods[${i}].type = this.value">
+                <option value="fortime" ${w.type === 'fortime' ? 'selected' : ''}>For Time</option>
+                <option value="amrap" ${w.type === 'amrap' ? 'selected' : ''}>AMRAP</option>
+                <option value="emom" ${w.type === 'emom' ? 'selected' : ''}>EMOM</option>
+                <option value="maxlift" ${w.type === 'maxlift' ? 'selected' : ''}>Max Lift</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="number" value="${w.timeCap || 12}" placeholder="Time Cap (min)" onchange="wods[${i}].timeCap = this.value">
+            </div>
+          </div>
+          <div class="form-group">
+            <textarea placeholder="Descrizione movimenti" onchange="wods[${i}].description = this.value">${w.description || ''}</textarea>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    window.addWod = () => {
+      wods.push({ name: '', type: 'fortime', timeCap: 12, description: '' });
+      renderWods();
+    };
+    
+    window.deleteWod = (index) => {
+      if (confirm('Eliminare questo WOD?')) {
+        wods.splice(index, 1);
+        renderWods();
+      }
+    };
+    
+    function getFormData() {
+      return {
+        name: document.getElementById('compName').value.trim(),
+        emoji: selectedEmoji,
+        date: document.getElementById('compDate').value,
+        time: document.getElementById('compTime').value,
+        price: parseInt(document.getElementById('compPrice').value) || 0,
+        maxAthletes: parseInt(document.getElementById('compMax').value) || 60,
+        location: document.getElementById('compLocation').value.trim(),
+        categories: document.getElementById('compCategories').value.split('\n').map(c => c.trim()).filter(c => c),
+        description: document.getElementById('compDesc').value.trim(),
+        lanes: parseInt(document.getElementById('compLanes').value) || 4,
+        registrationOpen: document.getElementById('toggleReg').classList.contains('on'),
+        requireApproval: document.getElementById('toggleApproval').classList.contains('on'),
+        teamMode: document.getElementById('toggleTeam').classList.contains('on'),
+        wodCount: wods.length,
+        updatedAt: Date.now()
+      };
+    }
+    
+    window.saveDraft = async () => {
+      const data = getFormData();
+      data.status = 'draft';
+      
+      if (!compId) {
+        compId = 'comp_' + Date.now();
+      }
+      
+      await DB.set(`competitions/${compId}`, {...competition, ...data});
+      
+      // Save WODs
+      for (let i = 0; i < wods.length; i++) {
+        const wodId = wods[i].id || 'wod_' + i;
+        await DB.set(`competitions/${compId}/wods/${wodId}`, wods[i]);
+      }
+      
+      alert('✅ Bozza salvata!');
+      updateShareLink();
+    };
+    
+    window.saveAndPublish = async () => {
+      const data = getFormData();
+      
+      if (!data.name) {
+        alert('Inserisci il nome della gara');
+        return;
+      }
+      if (!data.date) {
+        alert('Inserisci la data');
+        return;
+      }
+      
+      data.status = 'upcoming';
+      
+      if (!compId) {
+        compId = 'comp_' + Date.now();
+      }
+      
+      await DB.set(`competitions/${compId}`, {...competition, ...data});
+      
+      // Save WODs
+      for (let i = 0; i < wods.length; i++) {
+        const wodId = wods[i].id || 'wod_' + i;
+        await DB.set(`competitions/${compId}/wods/${wodId}`, wods[i]);
+      }
+      
+      alert('✅ Gara pubblicata!');
+      location.href = './';
+    };
+    
+    function updateShareLink() {
+      if (!compId) {
+        document.getElementById('shareUrl').value = 'Salva prima la gara';
+        return;
+      }
+      
+      const url = `${location.origin}/app/iscrizione.html?c=${compId}`;
+      document.getElementById('shareUrl').value = url;
+      
+      // Generate QR
+      const qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      document.getElementById('qrcode').innerHTML = qr.createImgTag(5);
+    }
+    
+    window.copyLink = () => {
+      const url = document.getElementById('shareUrl').value;
+      navigator.clipboard.writeText(url);
+      alert('✅ Link copiato!');
+    };
+  </script>
+</body>
+</html>

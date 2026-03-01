@@ -3,187 +3,186 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>🏋️ ARK Games 2.0</title>
+  <title>ARK Games - Competizioni CrossFit</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: #fff;
       min-height: 100vh;
+      min-height: 100dvh;
+      color: white;
       display: flex;
+      flex-direction: column;
+    }
+    
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      max-width: 400px;
-      width: 100%;
+      padding: 40px 20px;
+      max-width: 500px;
+      margin: 0 auto;
       text-align: center;
     }
-    .logo {
-      font-size: 80px;
-      margin-bottom: 10px;
+    
+    .logo { font-size: 5rem; margin-bottom: 20px; }
+    .brand {
+      font-size: 2.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #f39c12, #e74c3c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
     }
-    h1 {
-      font-size: 32px;
-      margin-bottom: 5px;
+    .tagline { color: #888; font-size: 1.1rem; margin-bottom: 50px; }
+    
+    .choices { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+    
+    .choice {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 30px 25px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      color: inherit;
     }
-    .version {
-      color: #888;
-      font-size: 14px;
-      margin-bottom: 40px;
+    .choice:hover {
+      transform: translateY(-4px);
+      background: rgba(255,255,255,0.08);
     }
-    .competitions {
-      margin-bottom: 30px;
-    }
-    .comp-card {
-      background: rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 12px;
+    .choice.athlete { border-color: #3498db; }
+    .choice.athlete:hover { border-color: #3498db; background: rgba(52, 152, 219, 0.15); }
+    .choice.admin { border-color: #f39c12; }
+    .choice.admin:hover { border-color: #f39c12; background: rgba(243, 156, 18, 0.15); }
+    
+    .choice-icon { font-size: 3rem; margin-bottom: 15px; }
+    .choice h2 { font-size: 1.4rem; margin-bottom: 8px; }
+    .choice p { color: #888; font-size: 0.95rem; }
+    
+    .live-banner {
+      margin-top: 40px;
+      background: rgba(231, 76, 60, 0.15);
+      border: 1px solid rgba(231, 76, 60, 0.4);
+      border-radius: 12px;
+      padding: 15px 20px;
+      width: 100%;
       cursor: pointer;
       transition: all 0.2s;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 15px;
     }
-    .comp-card:hover {
-      background: rgba(255,255,255,0.15);
-      transform: translateY(-2px);
+    .live-banner:hover { background: rgba(231, 76, 60, 0.25); }
+    .live-banner a { color: white; text-decoration: none; font-weight: 600; }
+    .pulse {
+      display: inline-block;
+      width: 10px; height: 10px;
+      background: #e74c3c;
+      border-radius: 50%;
+      margin-right: 10px;
+      animation: pulse 1.5s infinite;
     }
-    .comp-emoji {
-      font-size: 40px;
+    @keyframes pulse { 50% { opacity: 0.4; } }
+    
+    .footer {
+      padding: 20px;
+      text-align: center;
+      color: #555;
+      font-size: 0.8rem;
     }
-    .comp-info h3 {
-      font-size: 18px;
-      margin-bottom: 4px;
+    .footer a { color: #888; text-decoration: none; }
+    .footer a:hover { color: #f39c12; }
+    
+    /* Quick links for dev/existing features */
+    .dev-links {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      width: 100%;
     }
-    .comp-info p {
-      color: #888;
-      font-size: 13px;
-    }
-    .comp-status {
-      margin-left: auto;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .status-live { background: #e94560; }
-    .status-upcoming { background: #3498db; }
-    .status-ended { background: #666; }
-    .empty {
+    .dev-links summary {
       color: #666;
-      padding: 40px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-bottom: 15px;
     }
-    .nav-buttons {
+    .dev-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
     }
-    .nav-btn {
-      background: rgba(255,255,255,0.1);
-      border: none;
-      border-radius: 12px;
-      padding: 16px;
-      color: #fff;
-      font-size: 14px;
-      cursor: pointer;
+    .dev-btn {
+      padding: 12px 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #888;
+      text-decoration: none;
+      font-size: 0.75rem;
+      text-align: center;
       transition: all 0.2s;
     }
-    .nav-btn:hover {
-      background: rgba(255,255,255,0.2);
-    }
-    .nav-btn.primary {
-      background: linear-gradient(135deg, #e94560, #ff6b6b);
-      grid-column: span 2;
-    }
+    .dev-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+    .dev-btn .icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="logo">🏋️</div>
-    <h1>ARK Games</h1>
-    <p class="version">2.0</p>
+    <div class="logo">🏆</div>
+    <h1 class="brand">ARK GAMES</h1>
+    <p class="tagline">Gestisci le tue competizioni CrossFit</p>
     
-    <div class="competitions" id="competitions">
-      <div class="empty">Caricamento...</div>
+    <div class="choices">
+      <a href="app/" class="choice athlete">
+        <div class="choice-icon">💪</div>
+        <h2>Sono un Atleta</h2>
+        <p>Iscriviti alle gare e vedi i tuoi risultati</p>
+      </a>
+      
+      <a href="admin/" class="choice admin">
+        <div class="choice-icon">⚙️</div>
+        <h2>Sono un Organizzatore</h2>
+        <p>Gestisci il tuo box e le competizioni</p>
+      </a>
     </div>
     
-    <div class="nav-buttons">
-      <button class="nav-btn" onclick="location.href='register.html'" style="background: linear-gradient(135deg, #3498db, #2980b9);">
-        📝 Iscriviti alla Gara
-      </button>
-      <button class="nav-btn" onclick="location.href='athlete.html'">
-        🏃 Area Atleta
-      </button>
-      <button class="nav-btn primary" onclick="location.href='admin.html'">
-        ⚙️ Admin / Crea Gara
-      </button>
-      <button class="nav-btn" onclick="location.href='judge.html'">
-        📋 Giudice
-      </button>
-      <button class="nav-btn" onclick="location.href='leaderboard.html'">
-        🏆 Leaderboard
-      </button>
-      <button class="nav-btn" onclick="location.href='stream-webrtc.html'" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
-        🎬 Regia WebRTC
-      </button>
-      <button class="nav-btn" onclick="location.href='tv.html'">
-        📺 TV Monitor
-      </button>
-      <button class="nav-btn" onclick="location.href='camera-webrtc.html'" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
-        📷 Camera App
-      </button>
-      <button class="nav-btn" onclick="location.href='output.html'" style="background: linear-gradient(135deg, #e67e22, #d35400);">
-        📺 Output Preview
-      </button>
+    <div class="live-banner" id="liveBanner" style="display:none;">
+      <span class="pulse"></span>
+      <a href="live/" id="liveLink">Gara in corso - LIVE →</a>
     </div>
+    
+    <details class="dev-links">
+      <summary>🔧 Accesso rapido (staff)</summary>
+      <div class="dev-grid">
+        <a href="judge.html" class="dev-btn"><span class="icon">⚖️</span>Giudice</a>
+        <a href="live/leaderboard.html" class="dev-btn"><span class="icon">🏆</span>Classifica</a>
+        <a href="live/tv.html" class="dev-btn"><span class="icon">📺</span>TV</a>
+        <a href="camera-webrtc.html" class="dev-btn"><span class="icon">📷</span>Camera</a>
+        <a href="stream-webrtc.html" class="dev-btn"><span class="icon">🎬</span>Regia</a>
+        <a href="output.html" class="dev-btn"><span class="icon">📡</span>Output</a>
+      </div>
+    </details>
   </div>
-
+  
+  <footer class="footer">
+    <p>ARK Games 2.0 · <a href="https://github.com/cr7biogas/ark-games-2">GitHub</a></p>
+  </footer>
+  
   <script type="module">
     import { DB } from './firebase-config.js';
     
-    async function loadCompetitions() {
-      const comps = await DB.get('competitions');
-      const container = document.getElementById('competitions');
-      
-      if (!comps) {
-        container.innerHTML = '<div class="empty">Nessuna gara creata.<br>Vai su Admin per iniziare!</div>';
-        return;
+    // Check if any competition is live
+    DB.listen('competitions', (comps) => {
+      if (!comps) return;
+      const live = Object.entries(comps).find(([id, c]) => c.status === 'live');
+      if (live) {
+        document.getElementById('liveBanner').style.display = 'block';
+        document.getElementById('liveLink').textContent = `${live[1].name || 'Gara'} - LIVE →`;
       }
-      
-      container.innerHTML = '';
-      
-      Object.entries(comps).forEach(([id, comp]) => {
-        const status = comp.status || 'upcoming';
-        const statusLabel = { live: 'LIVE', upcoming: 'Prossima', ended: 'Conclusa' }[status];
-        const name = comp.name || comp.info?.name || 'Gara';
-        const date = comp.date || comp.info?.date || '';
-        
-        const card = document.createElement('div');
-        card.className = 'comp-card';
-        card.onclick = () => selectCompetition(id);
-        card.innerHTML = `
-          <div class="comp-emoji">🐾</div>
-          <div class="comp-info">
-            <h3>${name}</h3>
-            <p>${date}${comp.location ? ' · ' + comp.location : ''}</p>
-          </div>
-          <span class="comp-status status-${status}">${statusLabel}</span>
-        `;
-        container.appendChild(card);
-      });
-    }
-    
-    function selectCompetition(id) {
-      localStorage.setItem('ark2_compId', id);
-      location.href = 'leaderboard.html';
-    }
-    
-    loadCompetitions();
+    });
   </script>
 </body>
 </html>
