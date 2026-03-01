@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Gare - Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .back-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+        header {
+            background: rgba(0,0,0,0.3);
+            padding: 60px 20px 20px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        header p {
+            color: #888;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+        }
+        .tab {
+            padding: 8px 20px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #f39c12;
+            color: #000;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .gara-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .gara-card:hover {
+            border-color: #f39c12;
+            transform: translateY(-2px);
+        }
+        .gara-header {
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .gara-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+        .gara-info {
+            flex: 1;
+        }
+        .gara-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+        .gara-info .box-name {
+            color: #f39c12;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+        .gara-info .date {
+            color: #888;
+            font-size: 0.85rem;
+        }
+        .gara-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-open {
+            background: #27ae60;
+            color: white;
+        }
+        .badge-live {
+            background: #e74c3c;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+        .badge-closed {
+            background: #7f8c8d;
+            color: white;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .gara-footer {
+            background: rgba(0,0,0,0.2);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .gara-footer span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .profile-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+    <a href="index.html" class="back-btn">← Indietro</a>
+    
+    <header>
+        <h1>🏆 Gare Disponibili</h1>
+        <p>Trova e iscriviti alle competizioni</p>
+    </header>
+    
+    <div class="tabs">
+        <button class="tab active">Tutte</button>
+        <button class="tab">Iscrizioni Aperte</button>
+        <button class="tab">Le Mie</button>
+    </div>
+    
+    <div class="container">
+        <div class="gara-card" onclick="location.href='03-dettaglio-gara.html'">
+            <div class="gara-header">
+                <div class="gara-logo">🦁</div>
+                <div class="gara-info">
+                    <h3>ARK Games Spring 2026</h3>
+                    <div class="box-name">CrossFit ARK</div>
+                    <div class="date">📅 15 Marzo 2026</div>
+                </div>
+                <span class="gara-badge badge-open">APERTA</span>
+            </div>
+            <div class="gara-footer">
+                <span>👥 45 iscritti</span>
+                <span>🏋️ 4 WOD</span>
+                <span>💰 €25</span>
+            </div>
+        </div>
+        
+        <div class="gara-card">
+            <div class="gara-header">
+                <div class="gara-logo">🐺</div>
+                <div class="gara-info">
+                    <h3>Team Throwdown</h3>
+                    <div class="box-name">CrossFit Roma Nord</div>
+                    <div class="date">📅 22 Marzo 2026</div>
+                </div>
+                <span class="gara-badge badge-open">APERTA</span>
+            </div>
+            <div class="gara-footer">
+                <span>👥 12 team</span>
+                <span>🏋️ 3 WOD</span>
+                <span>💰 €40/team</span>
+            </div>
+        </div>
+        
+        <div class="gara-card">
+            <div class="gara-header">
+                <div class="gara-logo">🔥</div>
+                <div class="gara-info">
+                    <h3>Summer Showdown</h3>
+                    <div class="box-name">CrossFit Milano</div>
+                    <div class="date">📅 1 Giugno 2026</div>
+                </div>
+                <span class="gara-badge badge-live">🔴 LIVE</span>
+            </div>
+            <div class="gara-footer">
+                <span>👥 80 atleti</span>
+                <span>🏋️ 5 WOD</span>
+                <span>💰 €35</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="profile-btn" onclick="location.href='04-profilo-atleta.html'">👤</div>
+</body>
+</html>

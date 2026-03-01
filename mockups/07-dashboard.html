@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .back-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+        header {
+            background: rgba(0,0,0,0.3);
+            padding: 60px 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left h1 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header-left p {
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 3px;
+        }
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        @media (min-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .stat-card .label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .stat-card.highlight {
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.2), rgba(231, 76, 60, 0.2));
+            border: 1px solid rgba(243, 156, 18, 0.3);
+        }
+        .stat-card.highlight .number {
+            color: #f39c12;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .section-header h2 {
+            font-size: 1rem;
+            color: #f39c12;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .section-header a {
+            color: #888;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (min-width: 600px) {
+            .quick-actions { grid-template-columns: repeat(4, 1fr); }
+        }
+        .action-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            border-color: #f39c12;
+            transform: translateY(-2px);
+        }
+        .action-btn .icon {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .action-btn span {
+            font-size: 0.85rem;
+        }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border: none;
+        }
+        .gara-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+        .gara-card:hover {
+            border-color: #f39c12;
+        }
+        .gara-card .info h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        .gara-card .info .meta {
+            font-size: 0.8rem;
+            color: #888;
+            display: flex;
+            gap: 15px;
+        }
+        .gara-card .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-draft { background: #7f8c8d; }
+        .status-open { background: #27ae60; }
+        .status-live { background: #e74c3c; animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-item {
+            text-align: center;
+            color: #888;
+            font-size: 0.7rem;
+            cursor: pointer;
+            padding: 5px 15px;
+        }
+        .nav-item.active {
+            color: #f39c12;
+        }
+        .nav-item .icon {
+            font-size: 1.3rem;
+            margin-bottom: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+    <a href="index.html" class="back-btn">← Mockups</a>
+    
+    <header>
+        <div class="header-left">
+            <h1>🦁 CrossFit ARK</h1>
+            <p>Ciao, Eugenio!</p>
+        </div>
+        <div class="header-right">
+            <div class="icon-btn">🔔</div>
+            <div class="icon-btn">⚙️</div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card highlight">
+                <div class="icon">🏆</div>
+                <div class="number">3</div>
+                <div class="label">Gare</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">👥</div>
+                <div class="number">127</div>
+                <div class="label">Atleti</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">💰</div>
+                <div class="number">€2.3k</div>
+                <div class="label">Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon">📅</div>
+                <div class="number">14g</div>
+                <div class="label">Prossima</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-header">
+                <h2>⚡ Azioni Rapide</h2>
+            </div>
+            <div class="quick-actions">
+                <div class="action-btn primary" onclick="location.href='08-crea-gara.html'">
+                    <div class="icon">➕</div>
+                    <span>Nuova Gara</span>
+                </div>
+                <div class="action-btn">
+                    <div class="icon">📋</div>
+                    <span>Template</span>
+                </div>
+                <div class="action-btn">
+                    <div class="icon">👥</div>
+                    <span>Atleti</span>
+                </div>
+                <div class="action-btn">
+                    <div class="icon">📊</div>
+                    <span>Report</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section" style="padding-bottom: 80px;">
+            <div class="section-header">
+                <h2>🔥 Gare Attive</h2>
+                <a href="#">Vedi tutte →</a>
+            </div>
+            
+            <div class="gara-card">
+                <div class="info">
+                    <h3>ARK Games Spring 2026</h3>
+                    <div class="meta">
+                        <span>📅 15 Mar</span>
+                        <span>👥 45/60</span>
+                        <span>💰 €1,125</span>
+                    </div>
+                </div>
+                <span class="status status-open">APERTA</span>
+            </div>
+            
+            <div class="gara-card">
+                <div class="info">
+                    <h3>Team Throwdown</h3>
+                    <div class="meta">
+                        <span>📅 22 Mar</span>
+                        <span>👥 12 team</span>
+                        <span>💰 €480</span>
+                    </div>
+                </div>
+                <span class="status status-draft">BOZZA</span>
+            </div>
+            
+            <div class="gara-card">
+                <div class="info">
+                    <h3>Winter Games 2025</h3>
+                    <div class="meta">
+                        <span>📅 15 Dic</span>
+                        <span>👥 52</span>
+                        <span>💰 €1,300</span>
+                    </div>
+                </div>
+                <span class="status status-live">🔴 LIVE</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bottom-nav">
+        <div class="nav-item active">
+            <div class="icon">🏠</div>
+            <div>Home</div>
+        </div>
+        <div class="nav-item">
+            <div class="icon">🏆</div>
+            <div>Gare</div>
+        </div>
+        <div class="nav-item">
+            <div class="icon">👥</div>
+            <div>Atleti</div>
+        </div>
+        <div class="nav-item">
+            <div class="icon">📹</div>
+            <div>Live</div>
+        </div>
+        <div class="nav-item">
+            <div class="icon">⚙️</div>
+            <div>Settings</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homepage - Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .back-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 60px 20px 40px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        .brand {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .tagline {
+            color: #888;
+            font-size: 1.1rem;
+            margin-bottom: 50px;
+        }
+        .choice-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .choice-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .choice-card:hover {
+            border-color: #f39c12;
+            transform: translateY(-4px);
+            background: rgba(243, 156, 18, 0.1);
+        }
+        .choice-card .icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        .choice-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        .choice-card p {
+            color: #aaa;
+            font-size: 0.95rem;
+        }
+        .choice-card.athlete {
+            border-color: #3498db;
+        }
+        .choice-card.athlete:hover {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+        .choice-card.admin {
+            border-color: #f39c12;
+        }
+        .live-banner {
+            margin-top: 40px;
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .live-banner .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #e74c3c;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .live-banner a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+    <a href="index.html" class="back-btn">← Indietro</a>
+    
+    <div class="container">
+        <div class="logo">🏆</div>
+        <h1 class="brand">ARK GAMES</h1>
+        <p class="tagline">La piattaforma per le tue competizioni</p>
+        
+        <div class="choice-cards">
+            <div class="choice-card athlete" onclick="location.href='02-lista-gare.html'">
+                <div class="icon">💪</div>
+                <h2>Sono un Atleta</h2>
+                <p>Iscriviti alle gare, vedi i tuoi risultati</p>
+            </div>
+            
+            <div class="choice-card admin" onclick="location.href='05-admin-login.html'">
+                <div class="icon">⚙️</div>
+                <h2>Sono un Organizzatore</h2>
+                <p>Gestisci il tuo box e le tue competizioni</p>
+            </div>
+        </div>
+        
+        <div class="live-banner">
+            <span class="pulse"></span>
+            <a href="#">ARK Games Spring 2026 - LIVE ORA →</a>
+        </div>
+    </div>
+</body>
+</html>

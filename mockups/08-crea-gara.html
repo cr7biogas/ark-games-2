@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crea Gara - Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: white;
+            padding-bottom: 100px;
+        }
+        .mockup-label {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 100;
+        }
+        .back-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+        header {
+            background: rgba(0,0,0,0.3);
+            padding: 70px 20px 20px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        .progress-step {
+            width: 60px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.2);
+        }
+        .progress-step.active {
+            background: #f39c12;
+        }
+        .progress-step.done {
+            background: #27ae60;
+        }
+        .step-labels {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: #888;
+        }
+        .step-labels span.active {
+            color: #f39c12;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        .template-section {
+            margin-bottom: 30px;
+        }
+        .template-section h2 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            color: #f39c12;
+        }
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .template-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .template-card:hover {
+            border-color: #f39c12;
+        }
+        .template-card.selected {
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.1);
+        }
+        .template-card .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .template-card h3 {
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+        .template-card p {
+            font-size: 0.75rem;
+            color: #888;
+        }
+        .form-section {
+            margin-bottom: 25px;
+        }
+        .form-section h2 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 14px;
+            color: white;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #f39c12;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .emoji-picker {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .emoji-option {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .emoji-option:hover {
+            border-color: #f39c12;
+        }
+        .emoji-option.selected {
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.2);
+        }
+        .category-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .chip {
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .chip.selected {
+            background: rgba(52, 152, 219, 0.2);
+            border-color: #3498db;
+            color: #3498db;
+        }
+        .cta-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .draft-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #888;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .next-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="mockup-label">MOCKUP</div>
+    <a href="07-dashboard.html" class="back-btn">← Dashboard</a>
+    
+    <header>
+        <h1>➕ Nuova Gara</h1>
+        <div class="progress-steps">
+            <div class="progress-step active"></div>
+            <div class="progress-step"></div>
+            <div class="progress-step"></div>
+        </div>
+        <div class="step-labels">
+            <span class="active">Info Base</span>
+            <span>WOD</span>
+            <span>Pubblica</span>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="template-section">
+            <h2>🚀 Inizia da un Template</h2>
+            <div class="template-grid">
+                <div class="template-card selected">
+                    <div class="icon">🏆</div>
+                    <h3>Open</h3>
+                    <p>Gara individuale classica</p>
+                </div>
+                <div class="template-card">
+                    <div class="icon">👥</div>
+                    <h3>Team</h3>
+                    <p>Coppie o team</p>
+                </div>
+                <div class="template-card">
+                    <div class="icon">⚡</div>
+                    <h3>Throwdown</h3>
+                    <p>Formato veloce</p>
+                </div>
+                <div class="template-card">
+                    <div class="icon">✏️</div>
+                    <h3>Custom</h3>
+                    <p>Inizia da zero</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2>📋 Informazioni</h2>
+            
+            <div class="form-group">
+                <label>Nome della gara *</label>
+                <input type="text" placeholder="Es: ARK Games Spring 2026">
+            </div>
+            
+            <div class="form-group">
+                <label>Icona</label>
+                <div class="emoji-picker">
+                    <div class="emoji-option selected">🏆</div>
+                    <div class="emoji-option">🦁</div>
+                    <div class="emoji-option">🔥</div>
+                    <div class="emoji-option">⚡</div>
+                    <div class="emoji-option">💪</div>
+                    <div class="emoji-option">🐺</div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Data *</label>
+                    <input type="date" value="2026-03-15">
+                </div>
+                <div class="form-group">
+                    <label>Ora inizio</label>
+                    <input type="time" value="09:00">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Prezzo (€)</label>
+                    <input type="number" placeholder="25" value="25">
+                </div>
+                <div class="form-group">
+                    <label>Max atleti</label>
+                    <input type="number" placeholder="60" value="60">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Categorie</label>
+                <div class="category-chips">
+                    <span class="chip selected">👨 M RX</span>
+                    <span class="chip selected">👩 F RX</span>
+                    <span class="chip selected">👨 M Scaled</span>
+                    <span class="chip selected">👩 F Scaled</span>
+                    <span class="chip">👴 Masters 40+</span>
+                    <span class="chip">🔰 Beginners</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Descrizione</label>
+                <textarea placeholder="Descrivi la tua gara..."></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <div class="cta-bar">
+        <button class="draft-btn">💾 Salva bozza</button>
+        <button class="next-btn">Avanti: WOD →</button>
+    </div>
+</body>
+</html>
