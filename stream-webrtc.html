@@ -10,6 +10,7 @@
       --card: #1a1a24;
       --accent: #e94560;
       --success: #2ecc71;
+      --warning: #f1c40f;
       --border: #2a2a3a;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,11 +28,13 @@
     .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #888; }
     .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
     .header .actions { margin-left: auto; display: flex; gap: 10px; }
-    .btn { padding: 10px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn { padding: 10px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { transform: scale(1.02); }
     .btn-primary { background: var(--accent); color: white; }
     .btn-secondary { background: var(--card); color: white; }
+    .btn-success { background: var(--success); color: white; }
     
-    .main { display: grid; grid-template-columns: 1fr 280px; height: calc(100vh - 56px); }
+    .main { display: grid; grid-template-columns: 1fr 300px; height: calc(100vh - 56px); }
     
     .preview-area { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
     
@@ -68,9 +71,10 @@
       cursor: pointer;
       overflow: hidden;
       border: 2px solid transparent;
+      transition: all 0.2s;
     }
     .slot:hover { border-color: var(--border); }
-    .slot.active { border-color: var(--accent); }
+    .slot.active { border-color: var(--accent); box-shadow: 0 0 20px rgba(233,69,96,0.3); }
     .slot video { width: 100%; height: 100%; object-fit: cover; }
     .slot .label {
       position: absolute;
@@ -85,13 +89,15 @@
       position: absolute;
       top: 6px;
       right: 6px;
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background: #666;
     }
-    .slot .indicator.live { background: var(--success); }
-    .slot .indicator.connecting { background: #f1c40f; }
+    .slot .indicator.live { background: var(--success); animation: pulse 2s infinite; }
+    .slot .indicator.connecting { background: var(--warning); animation: blink 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes blink { 50% { opacity: 0.3; } }
     
     .sidebar {
       background: #12121a;
@@ -109,6 +115,15 @@
       text-transform: uppercase;
       color: #888;
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sidebar-section h3 .count {
+      background: var(--card);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
     }
     
     .camera-list { flex: 1; overflow-y: auto; padding: 10px; }
@@ -125,13 +140,15 @@
       width: 10px;
       height: 10px;
       border-radius: 50%;
+      flex-shrink: 0;
     }
-    .cam-item .dot.waiting { background: #f1c40f; }
+    .cam-item .dot.waiting { background: var(--warning); }
     .cam-item .dot.streaming { background: var(--success); }
-    .cam-item .dot.disconnected { background: #e74c3c; }
-    .cam-item .info { flex: 1; }
-    .cam-item .name { font-size: 13px; font-weight: 600; }
-    .cam-item .id { font-size: 10px; color: #888; }
+    .cam-item .dot.disconnected, .cam-item .dot.failed { background: #e74c3c; }
+    .cam-item .dot.background { background: #9b59b6; }
+    .cam-item .info { flex: 1; min-width: 0; }
+    .cam-item .name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cam-item .meta { font-size: 10px; color: #888; margin-top: 2px; }
     .cam-item select {
       padding: 6px;
       border-radius: 6px;
@@ -139,9 +156,32 @@
       background: var(--bg);
       color: white;
       font-size: 11px;
+      cursor: pointer;
+    }
+    .cam-item .reconnect-btn {
+      padding: 4px 8px;
+      font-size: 10px;
+      background: var(--accent);
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
     }
     
     .empty { text-align: center; color: #666; padding: 30px; font-size: 13px; }
+    
+    .log-section {
+      border-top: 1px solid var(--border);
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 10px;
+      color: #888;
+    }
+    .log-section .log-entry { padding: 2px 0; }
+    .log-section .log-entry.error { color: #e74c3c; }
+    .log-section .log-entry.success { color: var(--success); }
   </style>
 </head>
 <body>
@@ -152,7 +192,8 @@
       <span id="statusText">In ascolto...</span>
     </div>
     <div class="actions">
-      <button class="btn btn-secondary" onclick="refreshCameras()">🔄 Refresh</button>
+      <button class="btn btn-secondary" onclick="refreshAll()">🔄 Riconnetti Tutte</button>
+      <button class="btn btn-secondary" onclick="cleanupStale()">🧹 Pulisci</button>
       <button class="btn btn-primary" onclick="toggleFullscreen()">⛶</button>
     </div>
   </div>
@@ -193,11 +234,15 @@
     
     <div class="sidebar">
       <div class="sidebar-section">
-        <h3>📷 Camere Disponibili</h3>
+        <h3>
+          📷 Camere Disponibili
+          <span class="count" id="camCount">0</span>
+        </h3>
       </div>
       <div class="camera-list" id="cameraList">
-        <div class="empty">In attesa di camere...<br><br>Apri <b>camera-webrtc.html</b> sui telefoni</div>
+        <div class="empty">In attesa di camere...<br><br>Apri <b>camera-webrtc.html</b><br>sui telefoni</div>
       </div>
+      <div class="log-section" id="logSection"></div>
     </div>
   </div>
 
@@ -209,32 +254,59 @@
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
     
+    const STALE_TIMEOUT = 15000; // 15 seconds without heartbeat = stale
+    
     // State
-    const cameras = new Map(); // camId -> { info, peerConnection, stream }
-    const slots = [null, null, null, null]; // slot -> camId
+    const cameras = new Map(); // camId -> { info, peerConnection, stream, unsubscribers, addedCandidates }
+    const slots = [null, null, null, null]; // slot index -> camId
     let activeSlot = null;
+    
+    function log(msg, type = 'info') {
+      console.log(`[Regia] ${msg}`);
+      const section = document.getElementById('logSection');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `${new Date().toLocaleTimeString()} - ${msg}`;
+      section.insertBefore(entry, section.firstChild);
+      
+      // Keep only last 50 entries
+      while (section.children.length > 50) {
+        section.removeChild(section.lastChild);
+      }
+    }
     
     // Listen for cameras
     DB.listen('streams', (data) => {
       if (!data) {
         document.getElementById('cameraList').innerHTML = '<div class="empty">Nessuna camera online</div>';
+        document.getElementById('camCount').textContent = '0';
         return;
       }
+      
+      const now = Date.now();
       
       // Update camera list
       for (const [camId, info] of Object.entries(data)) {
         if (!cameras.has(camId)) {
-          cameras.set(camId, { info, peerConnection: null, stream: null });
+          // New camera discovered
+          cameras.set(camId, { 
+            info, 
+            peerConnection: null, 
+            stream: null,
+            unsubscribers: [],
+            addedCandidates: new Set()
+          });
+          log(`Nuova camera: ${info.name || camId}`, 'success');
         } else {
+          // Update existing camera info
           cameras.get(camId).info = info;
         }
       }
       
-      // Remove disconnected cameras
+      // Remove disconnected cameras (not in Firebase anymore)
       for (const camId of cameras.keys()) {
         if (!data[camId]) {
-          const cam = cameras.get(camId);
-          if (cam.peerConnection) cam.peerConnection.close();
+          disconnectCamera(camId);
           cameras.delete(camId);
           
           // Remove from slot
@@ -243,12 +315,36 @@
             slots[slotIdx] = null;
             updateSlot(slotIdx);
           }
+          
+          log(`Camera rimossa: ${camId}`);
         }
       }
       
-      renderCameraList();
+      document.getElementById('camCount').textContent = cameras.size.toString();
       document.getElementById('statusText').textContent = `${cameras.size} camere`;
+      renderCameraList();
     });
+    
+    function disconnectCamera(camId) {
+      const cam = cameras.get(camId);
+      if (!cam) return;
+      
+      // Cleanup unsubscribers
+      cam.unsubscribers.forEach(fn => fn?.());
+      cam.unsubscribers = [];
+      
+      // Close peer connection
+      if (cam.peerConnection) {
+        cam.peerConnection.ontrack = null;
+        cam.peerConnection.onicecandidate = null;
+        cam.peerConnection.onconnectionstatechange = null;
+        cam.peerConnection.close();
+        cam.peerConnection = null;
+      }
+      
+      cam.stream = null;
+      cam.addedCandidates.clear();
+    }
     
     function renderCameraList() {
       const list = document.getElementById('cameraList');
@@ -258,17 +354,25 @@
         return;
       }
       
+      const now = Date.now();
+      
       list.innerHTML = Array.from(cameras.entries()).map(([camId, cam]) => {
         const status = cam.info.status || 'waiting';
         const assignedSlot = slots.indexOf(camId);
+        const lastHB = cam.info.lastHeartbeat || 0;
+        const isStale = (now - lastHB) > STALE_TIMEOUT;
+        const ago = lastHB ? Math.round((now - lastHB) / 1000) + 's ago' : 'never';
         
         return `
           <div class="cam-item">
-            <div class="dot ${status}"></div>
+            <div class="dot ${isStale ? 'disconnected' : status}"></div>
             <div class="info">
               <div class="name">${cam.info.name || 'Camera'}</div>
-              <div class="id">${camId}</div>
+              <div class="meta">${cam.info.quality || '?'}p · HB: ${ago}</div>
             </div>
+            ${status === 'failed' || isStale ? 
+              `<button class="reconnect-btn" onclick="reconnectCamera('${camId}')">↻</button>` : 
+              ''}
             <select onchange="assignCamera('${camId}', this.value)">
               <option value="">--</option>
               <option value="0" ${assignedSlot===0?'selected':''}>Lane 1</option>
@@ -280,6 +384,16 @@
         `;
       }).join('');
     }
+    
+    window.reconnectCamera = async (camId) => {
+      const slotIdx = slots.indexOf(camId);
+      if (slotIdx >= 0) {
+        log(`Riconnessione camera ${camId}...`);
+        disconnectCamera(camId);
+        cameras.get(camId).addedCandidates = new Set();
+        await connectToCamera(camId, slotIdx);
+      }
+    };
     
     window.assignCamera = async (camId, slotStr) => {
       const slotIdx = slotStr === '' ? -1 : parseInt(slotStr);
@@ -293,23 +407,16 @@
       
       if (slotIdx < 0) {
         // Just unassign
-        const cam = cameras.get(camId);
-        if (cam?.peerConnection) {
-          cam.peerConnection.close();
-          cam.peerConnection = null;
-          cam.stream = null;
-        }
+        disconnectCamera(camId);
         renderCameraList();
+        log(`Camera ${camId} rimossa dallo slot`);
         return;
       }
       
       // Remove previous camera from this slot
       if (slots[slotIdx]) {
-        const oldCam = cameras.get(slots[slotIdx]);
-        if (oldCam?.peerConnection) {
-          oldCam.peerConnection.close();
-          oldCam.peerConnection = null;
-        }
+        const oldCamId = slots[slotIdx];
+        disconnectCamera(oldCamId);
       }
       
       slots[slotIdx] = camId;
@@ -329,12 +436,30 @@
       const indicator = slot.querySelector('.indicator');
       indicator.className = 'indicator connecting';
       
+      log(`Connessione a ${cam.info.name || camId}...`);
+      
+      // Cleanup any existing connection
+      disconnectCamera(camId);
+      cam.addedCandidates = new Set();
+      
+      // Clear previous signaling data
+      try {
+        await DB.remove(`streams/${camId}/viewerOffer`);
+        await DB.remove(`streams/${camId}/viewerCandidates`);
+        await DB.remove(`streams/${camId}/cameraAnswer`);
+        await DB.remove(`streams/${camId}/cameraCandidates`);
+      } catch (e) {}
+      
+      // Small delay to ensure Firebase sync
+      await new Promise(r => setTimeout(r, 200));
+      
       // Create peer connection
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       cam.peerConnection = pc;
       
       // Handle incoming stream
       pc.ontrack = (e) => {
+        log(`Stream ricevuto da ${cam.info.name || camId}`, 'success');
         cam.stream = e.streams[0];
         const video = slot.querySelector('video');
         video.srcObject = e.streams[0];
@@ -343,22 +468,33 @@
         // If this is active slot, show in main
         if (activeSlot === slotIdx) {
           document.getElementById('mainVideo').srcObject = e.streams[0];
+          document.getElementById('noFeed').style.display = 'none';
         }
       };
       
       // ICE candidates
       pc.onicecandidate = async (e) => {
         if (e.candidate) {
-          const candId = Date.now().toString();
+          const candId = `${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
           await DB.set(`streams/${camId}/viewerCandidates/${candId}`, e.candidate.toJSON());
         }
       };
       
       // Connection state
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        const state = pc.connectionState;
+        log(`${cam.info.name || camId}: ${state}`);
+        
+        if (state === 'connected') {
+          indicator.className = 'indicator live';
+        } else if (state === 'disconnected') {
+          indicator.className = 'indicator connecting';
+        } else if (state === 'failed') {
           indicator.className = 'indicator';
+          log(`Connessione fallita: ${cam.info.name || camId}`, 'error');
         }
+        
+        renderCameraList();
       };
       
       // Create offer
@@ -372,23 +508,38 @@
         sdp: offer.sdp
       });
       
+      log(`Offer inviato a ${cam.info.name || camId}`);
+      
       // Listen for answer
       const unsubAnswer = DB.listen(`streams/${camId}/cameraAnswer`, async (answer) => {
-        if (!answer) return;
+        if (!answer || !pc || pc.signalingState === 'stable') return;
+        
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        } catch (e) {}
+          log(`Answer ricevuto da ${cam.info.name || camId}`, 'success');
+        } catch (e) {
+          log(`Errore answer: ${e.message}`, 'error');
+        }
       });
+      cam.unsubscribers.push(unsubAnswer);
       
       // Listen for camera's ICE candidates
       const unsubCands = DB.listen(`streams/${camId}/cameraCandidates`, async (candidates) => {
-        if (!candidates) return;
+        if (!candidates || !pc) return;
+        
         for (const [id, candidate] of Object.entries(candidates)) {
+          // Skip already added
+          if (cam.addedCandidates.has(id)) continue;
+          
           try {
             await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (e) {}
+            cam.addedCandidates.add(id);
+          } catch (e) {
+            // May fail if remote description not set yet - that's ok
+          }
         }
       });
+      cam.unsubscribers.push(unsubCands);
     }
     
     function updateSlot(slotIdx) {
@@ -428,11 +579,45 @@
       }
     };
     
-    window.refreshCameras = () => location.reload();
+    window.refreshAll = async () => {
+      log('Riconnessione di tutte le camere...');
+      for (let i = 0; i < slots.length; i++) {
+        if (slots[i]) {
+          const camId = slots[i];
+          disconnectCamera(camId);
+          cameras.get(camId).addedCandidates = new Set();
+          await connectToCamera(camId, i);
+          await new Promise(r => setTimeout(r, 500)); // Stagger reconnections
+        }
+      }
+    };
+    
+    window.cleanupStale = async () => {
+      const now = Date.now();
+      let cleaned = 0;
+      
+      for (const [camId, cam] of cameras.entries()) {
+        const lastHB = cam.info.lastHeartbeat || 0;
+        if ((now - lastHB) > STALE_TIMEOUT) {
+          try {
+            await DB.remove(`streams/${camId}`);
+            cleaned++;
+          } catch (e) {}
+        }
+      }
+      
+      log(`Pulite ${cleaned} camere stale`);
+    };
+    
     window.toggleFullscreen = () => {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen();
       else document.exitFullscreen();
     };
+    
+    // Auto-refresh camera list periodically to update heartbeat status
+    setInterval(renderCameraList, 5000);
+    
+    log('Regia WebRTC avviata', 'success');
   </script>
 </body>
 </html>

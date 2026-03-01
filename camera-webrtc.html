@@ -122,7 +122,7 @@
     .setup .logo { font-size: 70px; margin-bottom: 15px; }
     .setup h1 { font-size: 26px; margin-bottom: 8px; }
     .setup p { color: #888; font-size: 14px; margin-bottom: 30px; text-align: center; }
-    .setup input {
+    .setup input, .setup select {
       width: 100%;
       max-width: 280px;
       padding: 15px;
@@ -134,7 +134,7 @@
       text-align: center;
       margin-bottom: 15px;
     }
-    .setup input:focus { outline: none; border-color: #e94560; }
+    .setup input:focus, .setup select:focus { outline: none; border-color: #e94560; }
     .setup .btn { width: 100%; max-width: 280px; }
     .setup .error {
       background: rgba(231,76,60,0.2);
@@ -159,9 +159,9 @@
     
     <input type="text" id="camName" placeholder="Nome camera (es: Lane 1)">
     
-    <select id="quality" style="width:100%;max-width:280px;padding:15px;border-radius:12px;border:2px solid #333;background:rgba(255,255,255,0.05);color:white;font-size:16px;margin-bottom:15px">
+    <select id="quality">
       <option value="720">720p (HD)</option>
-      <option value="480">480p (SD)</option>
+      <option value="480" selected>480p (SD) - Consigliato</option>
       <option value="360">360p (Low)</option>
     </select>
     
@@ -196,7 +196,7 @@
       <div class="stats">
         Bitrate: <span id="bitrate">0 kbps</span> |
         FPS: <span id="fps">0</span> |
-        Viewers: <span id="viewers">0</span>
+        Conn: <span id="connState">-</span>
       </div>
     </div>
   </div>
@@ -209,13 +209,21 @@
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
     ];
+    const HEARTBEAT_INTERVAL = 5000; // 5 seconds
+    const RECONNECT_DELAY = 2000;
     
     // === STATE ===
     let camId = null;
+    let camName = '';
+    let quality = '480';
     let stream = null;
     let peerConnection = null;
     let facingMode = 'environment';
     let unsubscribers = [];
+    let heartbeatInterval = null;
+    let statsInterval = null;
+    let addedCandidates = new Set(); // Track added ICE candidates
+    let isConnecting = false;
     
     // === HELPERS ===
     function showError(msg) {
@@ -229,12 +237,17 @@
       const txt = document.getElementById('statusText');
       dot.className = 'dot ' + status;
       txt.textContent = text;
+      document.getElementById('connState').textContent = status;
+    }
+    
+    function log(msg) {
+      console.log(`[Camera ${camId || '?'}] ${msg}`);
     }
     
     // === MAIN ===
     window.start = async () => {
-      const name = document.getElementById('camName').value.trim() || 'Camera';
-      const quality = document.getElementById('quality').value;
+      camName = document.getElementById('camName').value.trim() || 'Camera';
+      quality = document.getElementById('quality').value;
       
       const resolutions = {
         '720': { width: 1280, height: 720 },
@@ -250,60 +263,129 @@
             facingMode,
             width: { ideal: res.width },
             height: { ideal: res.height },
-            frameRate: { ideal: 30 }
+            frameRate: { ideal: 30, max: 30 }
           },
           audio: false
         });
         
         document.getElementById('video').srcObject = stream;
         document.getElementById('setup').classList.add('hidden');
-        document.getElementById('nameLabel').textContent = name;
+        document.getElementById('nameLabel').textContent = camName;
         
         // Keep screen on
-        if ('wakeLock' in navigator) {
-          try { await navigator.wakeLock.request('screen'); } catch(e) {}
-        }
+        requestWakeLock();
         
-        // Generate camera ID
+        // Generate camera ID (persistent per session)
         camId = 'cam_' + Math.random().toString(36).substr(2, 8);
         document.getElementById('camId').textContent = camId;
         
         // Register in Firebase
-        await DB.set(`streams/${camId}`, {
-          name,
-          quality,
-          status: 'waiting',
-          createdAt: Date.now()
-        });
+        await registerCamera();
         
         setStatus('connecting', 'In attesa...');
         
-        // Listen for answer from viewer (regia)
+        // Listen for connection requests
         listenForConnection();
+        
+        // Start heartbeat
+        startHeartbeat();
+        
+        log('Camera started');
         
       } catch (e) {
         showError(e.message || 'Errore accesso camera');
+        log('Error: ' + e.message);
       }
     };
     
-    async function listenForConnection() {
-      // When regia sends an answer, create peer connection
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          const wakeLock = await navigator.wakeLock.request('screen');
+          document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+              try { await navigator.wakeLock.request('screen'); } catch(e) {}
+            }
+          });
+        } catch(e) {
+          log('Wake lock failed: ' + e.message);
+        }
+      }
+    }
+    
+    async function registerCamera() {
+      await DB.set(`streams/${camId}`, {
+        name: camName,
+        quality,
+        status: 'waiting',
+        createdAt: Date.now(),
+        lastHeartbeat: Date.now()
+      });
+    }
+    
+    function startHeartbeat() {
+      // Update heartbeat timestamp regularly
+      heartbeatInterval = setInterval(async () => {
+        if (camId) {
+          try {
+            await DB.update(`streams/${camId}`, { 
+              lastHeartbeat: Date.now(),
+              status: peerConnection?.connectionState === 'connected' ? 'streaming' : 'waiting'
+            });
+          } catch (e) {
+            log('Heartbeat failed: ' + e.message);
+          }
+        }
+      }, HEARTBEAT_INTERVAL);
+    }
+    
+    function listenForConnection() {
+      // When regia sends an offer, create peer connection
       const unsub = DB.listen(`streams/${camId}/viewerOffer`, async (offer) => {
-        if (!offer) return;
+        if (!offer || isConnecting) return;
         
+        log('Received offer from viewer');
+        isConnecting = true;
         setStatus('connecting', 'Connessione...');
         document.getElementById('connInfo').textContent = 'Regia connessa!';
         
+        // Clear previous connection
+        await cleanupPeerConnection();
+        
+        // Small delay to ensure cleanup
+        await new Promise(r => setTimeout(r, 100));
+        
         await createPeerConnection(offer);
+        isConnecting = false;
       });
       unsubscribers.push(unsub);
     }
     
-    async function createPeerConnection(viewerOffer) {
-      // Close existing connection
+    async function cleanupPeerConnection() {
       if (peerConnection) {
+        peerConnection.onicecandidate = null;
+        peerConnection.onconnectionstatechange = null;
+        peerConnection.oniceconnectionstatechange = null;
         peerConnection.close();
+        peerConnection = null;
       }
+      
+      // Clear our candidates from Firebase
+      try {
+        await DB.remove(`streams/${camId}/cameraCandidates`);
+        await DB.remove(`streams/${camId}/cameraAnswer`);
+      } catch (e) {}
+      
+      addedCandidates.clear();
+      
+      if (statsInterval) {
+        clearInterval(statsInterval);
+        statsInterval = null;
+      }
+    }
+    
+    async function createPeerConnection(viewerOffer) {
+      log('Creating peer connection');
       
       peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       
@@ -315,84 +397,144 @@
       // Handle ICE candidates
       peerConnection.onicecandidate = async (e) => {
         if (e.candidate) {
-          const candId = Date.now().toString();
+          const candId = `${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+          log('Sending ICE candidate: ' + candId);
           await DB.set(`streams/${camId}/cameraCandidates/${candId}`, e.candidate.toJSON());
         }
       };
       
-      // Connection state
+      // Connection state monitoring
       peerConnection.onconnectionstatechange = () => {
         const state = peerConnection.connectionState;
+        log('Connection state: ' + state);
+        
         if (state === 'connected') {
           setStatus('online', 'Live');
           DB.update(`streams/${camId}`, { status: 'streaming' });
           startStatsMonitor();
-        } else if (state === 'disconnected' || state === 'failed') {
-          setStatus('offline', 'Disconnesso');
-          DB.update(`streams/${camId}`, { status: 'disconnected' });
+        } else if (state === 'disconnected') {
+          setStatus('connecting', 'Riconnessione...');
+          // WebRTC will try to reconnect automatically
+        } else if (state === 'failed') {
+          setStatus('offline', 'Fallito');
+          DB.update(`streams/${camId}`, { status: 'failed' });
+          // Wait for new offer from viewer
+          document.getElementById('connInfo').textContent = 'Connessione persa. In attesa...';
         }
       };
       
-      // Set remote description (viewer's offer)
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(viewerOffer));
+      peerConnection.oniceconnectionstatechange = () => {
+        log('ICE state: ' + peerConnection.iceConnectionState);
+      };
       
-      // Create answer
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      
-      // Send answer to Firebase
-      await DB.set(`streams/${camId}/cameraAnswer`, {
-        type: answer.type,
-        sdp: answer.sdp
-      });
-      
-      // Listen for viewer's ICE candidates
-      const unsub = DB.listen(`streams/${camId}/viewerCandidates`, async (candidates) => {
-        if (!candidates) return;
-        for (const [id, candidate] of Object.entries(candidates)) {
-          try {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (e) {}
-        }
-      });
-      unsubscribers.push(unsub);
+      try {
+        // Set remote description (viewer's offer)
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(viewerOffer));
+        log('Set remote description');
+        
+        // Create answer
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        log('Created and set local answer');
+        
+        // Send answer to Firebase
+        await DB.set(`streams/${camId}/cameraAnswer`, {
+          type: answer.type,
+          sdp: answer.sdp
+        });
+        log('Sent answer to Firebase');
+        
+        // Listen for viewer's ICE candidates
+        const unsub = DB.listen(`streams/${camId}/viewerCandidates`, async (candidates) => {
+          if (!candidates || !peerConnection) return;
+          
+          for (const [id, candidate] of Object.entries(candidates)) {
+            // Skip already added candidates
+            if (addedCandidates.has(id)) continue;
+            
+            try {
+              await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+              addedCandidates.add(id);
+              log('Added viewer ICE candidate: ' + id);
+            } catch (e) {
+              log('Failed to add ICE candidate: ' + e.message);
+            }
+          }
+        });
+        unsubscribers.push(unsub);
+        
+      } catch (e) {
+        log('Error in createPeerConnection: ' + e.message);
+        setStatus('offline', 'Errore');
+        document.getElementById('connInfo').textContent = 'Errore: ' + e.message;
+      }
     }
     
     function startStatsMonitor() {
-      setInterval(async () => {
-        if (!peerConnection) return;
+      if (statsInterval) clearInterval(statsInterval);
+      
+      let lastBytesSent = 0;
+      let lastTimestamp = Date.now();
+      
+      statsInterval = setInterval(async () => {
+        if (!peerConnection || peerConnection.connectionState !== 'connected') return;
         
-        const stats = await peerConnection.getStats();
-        stats.forEach(report => {
-          if (report.type === 'outbound-rtp' && report.kind === 'video') {
-            const bitrate = Math.round((report.bytesSent * 8) / 1000);
-            document.getElementById('bitrate').textContent = bitrate + ' kbps';
-            document.getElementById('fps').textContent = report.framesPerSecond || '?';
-          }
-        });
+        try {
+          const stats = await peerConnection.getStats();
+          stats.forEach(report => {
+            if (report.type === 'outbound-rtp' && report.kind === 'video') {
+              // Calculate actual bitrate
+              const now = Date.now();
+              const bytesSent = report.bytesSent || 0;
+              const elapsed = (now - lastTimestamp) / 1000;
+              
+              if (elapsed > 0 && lastBytesSent > 0) {
+                const bitrate = Math.round(((bytesSent - lastBytesSent) * 8) / elapsed / 1000);
+                document.getElementById('bitrate').textContent = bitrate + ' kbps';
+              }
+              
+              lastBytesSent = bytesSent;
+              lastTimestamp = now;
+              
+              document.getElementById('fps').textContent = report.framesPerSecond || '?';
+            }
+          });
+        } catch (e) {}
       }, 2000);
     }
     
     window.switchCam = async () => {
       facingMode = facingMode === 'environment' ? 'user' : 'environment';
       
-      const oldStream = stream;
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
+      const res = { '720': {w:1280,h:720}, '480': {w:854,h:480}, '360': {w:640,h:360} }[quality];
       
-      document.getElementById('video').srcObject = stream;
-      
-      // Replace track in peer connection
-      if (peerConnection) {
-        const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
-        if (sender) {
-          sender.replaceTrack(stream.getVideoTracks()[0]);
+      try {
+        const oldStream = stream;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode, 
+            width: { ideal: res?.w || 854 }, 
+            height: { ideal: res?.h || 480 },
+            frameRate: { ideal: 30, max: 30 }
+          },
+          audio: false
+        });
+        
+        document.getElementById('video').srcObject = stream;
+        
+        // Replace track in peer connection
+        if (peerConnection) {
+          const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) {
+            await sender.replaceTrack(stream.getVideoTracks()[0]);
+          }
         }
+        
+        oldStream.getTracks().forEach(t => t.stop());
+        log('Switched camera');
+      } catch (e) {
+        log('Switch camera failed: ' + e.message);
       }
-      
-      oldStream.getTracks().forEach(t => t.stop());
     };
     
     window.toggleFlash = async () => {
@@ -405,22 +547,51 @@
         } else {
           alert('Flash non disponibile');
         }
-      } catch (e) {}
+      } catch (e) {
+        log('Flash toggle failed: ' + e.message);
+      }
     };
     
     window.stop = async () => {
+      log('Stopping camera');
+      
       // Cleanup
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      if (statsInterval) clearInterval(statsInterval);
       unsubscribers.forEach(fn => fn?.());
-      if (peerConnection) peerConnection.close();
+      
+      await cleanupPeerConnection();
+      
       if (stream) stream.getTracks().forEach(t => t.stop());
-      if (camId) await DB.remove(`streams/${camId}`);
+      if (camId) {
+        try {
+          await DB.remove(`streams/${camId}`);
+        } catch (e) {}
+      }
       
       location.reload();
     };
     
-    // Cleanup on close
-    window.addEventListener('beforeunload', () => {
-      if (camId) DB.remove(`streams/${camId}`);
+    // Cleanup on close - works better with pagehide on iOS
+    const cleanup = async () => {
+      if (camId) {
+        // Use sendBeacon for reliable delivery on page close
+        try {
+          // Quick Firebase remove (may not complete)
+          DB.remove(`streams/${camId}`);
+        } catch (e) {}
+      }
+    };
+    
+    window.addEventListener('pagehide', cleanup);
+    window.addEventListener('beforeunload', cleanup);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        // Update status when app goes to background
+        if (camId) {
+          DB.update(`streams/${camId}`, { status: 'background' }).catch(() => {});
+        }
+      }
     });
   </script>
 </body>
