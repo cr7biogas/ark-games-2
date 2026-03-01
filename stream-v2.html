@@ -369,7 +369,41 @@
       setQuality(quality) {
         this.quality = quality;
       }
+      
+      getStatus() {
+        if (!this.isRunning) return 'stopped';
+        if (this.reconnectAttempts > 0) return 'reconnecting';
+        if (this.fps > 0) return 'online';
+        return 'loading';
+      }
     }
+    
+    // === HEALTH MONITOR ===
+    // Periodically check offline cameras and retry
+    setInterval(() => {
+      cameras.forEach((stream, url) => {
+        if (stream.isRunning && stream.reconnectAttempts >= stream.maxReconnectAttempts) {
+          // Camera failed, try to restart
+          console.log(`Retrying failed camera: ${url}`);
+          stream.reconnectAttempts = 0;
+          stream.loadFrame();
+        }
+      });
+      
+      // Update status indicators
+      document.querySelectorAll('.camera-slot').forEach((slot, idx) => {
+        const url = slots[idx];
+        const indicator = slot.querySelector('.status-indicator');
+        
+        if (!url || !cameras.has(url)) {
+          indicator.className = 'status-indicator loading';
+          return;
+        }
+        
+        const status = cameras.get(url).getStatus();
+        indicator.className = 'status-indicator ' + (status === 'online' ? '' : status === 'reconnecting' ? 'loading' : 'error');
+      });
+    }, 3000);
     
     // === APP STATE ===
     
@@ -535,26 +569,57 @@
       
       const baseIps = ['192.168.1', '192.168.0', '10.0.0'];
       const ports = [4747, 8080];
+      const found = [];
       
+      // Scan in parallel batches
+      const scanOne = async (url) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 200);
+          
+          // Try to load actual image to verify it's a camera
+          const img = new Image();
+          const loaded = await new Promise((resolve) => {
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = `${url}/shot.jpg?t=${Date.now()}`;
+            setTimeout(() => resolve(false), 250);
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (loaded && img.naturalWidth > 0) {
+            return url;
+          }
+        } catch (e) {}
+        return null;
+      };
+      
+      // Batch scan
       for (const base of baseIps) {
-        for (let i = 100; i <= 120; i++) {
+        const batch = [];
+        for (let i = 1; i <= 50; i++) {
           for (const port of ports) {
-            const url = `http://${base}.${i}:${port}`;
-            try {
-              const controller = new AbortController();
-              setTimeout(() => controller.abort(), 300);
-              await fetch(`${url}/shot.jpg`, { signal: controller.signal, mode: 'no-cors' });
-              
-              if (!cameras.has(url)) {
-                const stream = new CameraStream(url, document.createElement('canvas'));
-                cameras.set(url, stream);
-              }
-            } catch (e) {}
+            batch.push(scanOne(`http://${base}.${i}:${port}`));
           }
         }
+        
+        document.getElementById('statusText').textContent = `Scansione ${base}...`;
+        const results = await Promise.all(batch);
+        results.filter(Boolean).forEach(url => {
+          if (!cameras.has(url)) {
+            const stream = new CameraStream(url, document.createElement('canvas'));
+            cameras.set(url, stream);
+            found.push(url);
+          }
+        });
+        
+        if (found.length > 0) break; // Stop if we found cameras
       }
       
-      document.getElementById('statusText').textContent = `Trovate ${cameras.size} camere`;
+      document.getElementById('statusText').textContent = found.length > 0 
+        ? `Trovate ${found.length} camere!` 
+        : 'Nessuna camera trovata';
       renderCameraList();
     }
     
