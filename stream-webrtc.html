@@ -227,6 +227,61 @@
       border-radius: 12px;
     }
     
+    /* Output Control */
+    .output-control {
+      background: linear-gradient(135deg, #1a1a24, #2a1a30);
+      border: 2px solid #e94560;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .output-control h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #e94560;
+    }
+    .output-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .output-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .output-row label:first-child {
+      min-width: 120px;
+      color: #888;
+    }
+    .output-row select {
+      flex: 1;
+      max-width: 200px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid #333;
+      background: #0a0a0f;
+      color: white;
+      font-size: 14px;
+    }
+    .btn-small {
+      padding: 8px 15px;
+      font-size: 13px;
+    }
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.05);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .toggle:hover { background: rgba(255,255,255,0.1); }
+    .toggle input { width: 16px; height: 16px; }
+    
     /* Log */
     .log {
       margin-top: 30px;
@@ -332,6 +387,27 @@
     </div>
   </div>
   
+  <!-- Output Control Panel -->
+  <div class="output-control">
+    <h2>📺 Controllo Output</h2>
+    <div class="output-panel">
+      <div class="output-row">
+        <label>Camera Output:</label>
+        <select id="outputCameraSelect" onchange="setOutputCamera(this.value)">
+          <option value="">-- Nessuna --</option>
+        </select>
+        <button class="btn btn-small" onclick="sendToOutput()" title="Manda camera selezionata all'output">📤 LIVE</button>
+      </div>
+      <div class="output-row">
+        <span>Overlay:</span>
+        <label class="toggle"><input type="checkbox" id="ovLogo" checked onchange="updateOverlay()"> 🏋️ Logo</label>
+        <label class="toggle"><input type="checkbox" id="ovLive" checked onchange="updateOverlay()"> 🔴 Live</label>
+        <label class="toggle"><input type="checkbox" id="ovTimer" checked onchange="updateOverlay()"> ⏱️ Timer</label>
+        <label class="toggle"><input type="checkbox" id="ovWod" onchange="updateOverlay()"> 📋 WOD</label>
+      </div>
+    </div>
+  </div>
+  
   <h2>📷 Camere Disponibili</h2>
   <div class="camera-list" id="cameraList">
     <div class="empty">In attesa di camere...<br>Apri camera-webrtc.html sui telefoni</div>
@@ -396,6 +472,7 @@
     
     function updateUI() {
       document.getElementById('camCount').textContent = cameras.size;
+      updateOutputSelect();
       
       // Update camera list
       const list = document.getElementById('cameraList');
@@ -585,6 +662,57 @@
       await DB.remove('streams');
       log('Tutte le camere rimosse');
     };
+    
+    // === OUTPUT CONTROL ===
+    window.setOutputCamera = async (camId) => {
+      await DB.set('outputConfig/camera', camId || null);
+      log(`Output camera: ${camId || 'nessuna'}`);
+    };
+    
+    window.sendToOutput = async () => {
+      // Find first slot with video and send to output
+      for (let i = 0; i < 4; i++) {
+        if (slots[i]) {
+          await DB.set('outputConfig/camera', slots[i]);
+          document.getElementById('outputCameraSelect').value = slots[i];
+          log(`Mandato a output: ${cameras.get(slots[i])?.info?.name || slots[i]}`, 'success');
+          return;
+        }
+      }
+      alert('Nessuna camera connessa');
+    };
+    
+    window.updateOverlay = async () => {
+      const config = {
+        logo: document.getElementById('ovLogo').checked,
+        live: document.getElementById('ovLive').checked,
+        timer: document.getElementById('ovTimer').checked,
+        wod: document.getElementById('ovWod').checked
+      };
+      await DB.set('outputConfig/overlay', config);
+      log('Overlay aggiornate');
+    };
+    
+    // Update output camera select when cameras change
+    function updateOutputSelect() {
+      const select = document.getElementById('outputCameraSelect');
+      const current = select.value;
+      select.innerHTML = '<option value="">-- Nessuna --</option>' +
+        Array.from(cameras.entries()).map(([id, cam]) =>
+          `<option value="${id}">${cam.info.name || id}</option>`
+        ).join('');
+      select.value = current;
+    }
+    
+    // Load initial overlay config
+    DB.get('outputConfig/overlay').then(config => {
+      if (config) {
+        document.getElementById('ovLogo').checked = config.logo !== false;
+        document.getElementById('ovLive').checked = config.live !== false;
+        document.getElementById('ovTimer').checked = config.timer !== false;
+        document.getElementById('ovWod').checked = config.wod === true;
+      }
+    });
     
     log('Regia avviata', 'success');
     

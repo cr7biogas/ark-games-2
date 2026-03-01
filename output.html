@@ -136,11 +136,24 @@
       }
       
       updateList();
-      
-      // Auto-select first if none
-      if (!currentCamId && cameras.size > 0) {
-        selectCamera(cameras.keys().next().value);
+    });
+    
+    // Listen for OUTPUT CONFIG from regia
+    DB.listen('outputConfig/camera', (camId) => {
+      if (camId && camId !== currentCamId) {
+        console.log('Regia selected camera:', camId);
+        selectCamera(camId);
       }
+    });
+    
+    DB.listen('outputConfig/overlay', (config) => {
+      if (!config) return;
+      document.querySelector('.top-bar').style.display = config.logo === false && config.live === false ? 'none' : '';
+      document.querySelector('.logo').style.display = config.logo === false ? 'none' : '';
+      document.querySelector('.live-badge').style.display = config.live === false ? 'none' : '';
+      document.querySelector('.timer-box').style.display = config.timer === false ? 'none' : '';
+      document.querySelector('.wod-box').style.display = config.wod === true ? '' : 'none';
+      console.log('Overlay config updated:', config);
     });
     
     function updateList() {
