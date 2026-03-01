@@ -585,7 +585,7 @@
           <div class="emoji">💪</div>
           <div class="info">
             <h3>${w.name}</h3>
-            <p>${w.type.toUpperCase()} · ${w.timeCapSec/60} min</p>
+            <p>${(w.type || 'fortime').toUpperCase()} · ${Math.round((w.timeCapSec || 600)/60)} min</p>
           </div>
         </div>
       `).join('');
